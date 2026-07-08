@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>서초 러너 AI 코스</title>
+  <title>STOPLESS</title>
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=127d37705c82c57a9792ec156edc788b&libraries=services"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <style>
@@ -53,7 +53,7 @@
       margin: 0;
       color: var(--near-white);
       font-size: clamp(30px, 4vw, 40px);
-      font-weight: 500;
+      font-weight: 700;
       line-height: 1.2;
       letter-spacing: 0;
     }
@@ -325,14 +325,33 @@
       color: #000;
       background: var(--green);
     }
+
+    .loop-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 9999px;
+      color: var(--silver);
+      background: var(--surface-2);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .loop-toggle input {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--green);
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="panel">
       <section>
-        <h1>서초 러너 AI 코스</h1>
-        <p>카카오 지도 위에서 보행자 통행 가능 경로를 찾고, 서초구 신호등 데이터를 기준으로 지나가는 횡단보도를 최대한 줄입니다.</p>
+        <h1>STOPLESS</h1>
+        <p>카카오 지도 위에서 보행자 통행 가능 경로를 찾고, 서울 전체 신호등 데이터를 기준으로 지나가는 횡단보도를 최대한 줄입니다.</p>
       </section>
 
       <form id="routeForm">
@@ -345,8 +364,8 @@
           <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
         </label>
         <div class="map-pick-row" aria-label="지도에서 위치 선택">
-          <button id="pickStart" class="secondary" type="button">시작 선택</button>
-          <button id="pickEnd" class="secondary" type="button">도착 선택</button>
+          <button id="pickStart" class="secondary" type="button">지도에서 시작점 선택</button>
+          <button id="pickEnd" class="secondary" type="button">지도에서 도착점 선택</button>
         </div>
         <label>
           목표 거리
@@ -354,6 +373,10 @@
             <label><input type="radio" name="targetKm" value="5" checked><span>5km</span></label>
             <label><input type="radio" name="targetKm" value="10"><span>10km</span></label>
           </div>
+        </label>
+        <label class="loop-toggle">
+          <input id="loopRoute" type="checkbox">
+          출발지로 돌아오는 루프 코스
         </label>
         <div class="button-row">
           <button id="makeRoute" type="submit">AI 추천코스</button>
@@ -379,7 +402,7 @@
 
     <main class="map-area">
       <div id="map"></div>
-      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 겹치는 구간은 텍스트 없이 화살표만 표시합니다.</div>
+      <div class="map-badge" id="mapBadge">초록 선은 추천 러닝 코스입니다. 분홍 점선은 같은 길을 다시 지나는 구간입니다.</div>
     </main>
   </div>
 
@@ -414,6 +437,7 @@
     const rerouteBtn = document.querySelector("#reroute");
     const pickStartBtn = document.querySelector("#pickStart");
     const pickEndBtn = document.querySelector("#pickEnd");
+    const loopRouteInput = document.querySelector("#loopRoute");
 
     let map;
     let geocoder;
@@ -501,7 +525,7 @@
       pickEndBtn.classList.toggle("active", pickMode === "end");
       mapBadgeEl.textContent = pickMode
         ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
-        : "파란 선은 추천 러닝 코스입니다. 겹치는 구간은 텍스트 없이 화살표만 표시합니다.";
+        : "초록 선은 추천 러닝 코스입니다. 분홍 점선은 같은 길을 다시 지나는 구간입니다.";
     }
 
     function addDraftPin(point, title, mode) {
@@ -609,7 +633,31 @@
       return [p.lat, p.lng];
     }
 
+    function buildLoopWaypointSets(start, targetMeters) {
+      const radius = Math.min(Math.max(targetMeters / (Math.PI * 2) * 1.08, 620), 1900);
+      const patterns = [
+        [0, 90, 180, 270],
+        [45, 135, 225, 315],
+        [20, 110, 205, 300],
+        [-25, 65, 155, 245],
+        [0, 72, 144, 216, 288],
+        [36, 108, 180, 252, 324]
+      ];
+      return patterns.map((angles, index) => {
+        const scale = 1 + (index % 3) * .08;
+        const points = angles.map((deg) => {
+          const rad = deg * Math.PI / 180;
+          return {
+            x: start.x + Math.cos(rad) * radius * scale,
+            y: start.y + Math.sin(rad) * radius * scale
+          };
+        });
+        return [start, ...points, start];
+      });
+    }
+
     function buildWaypointSets(start, end, targetMeters) {
+      if (distance(start, end) < 80) return buildLoopWaypointSets(start, targetMeters);
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const direct = Math.max(distance(start, end), 1);
@@ -692,7 +740,7 @@
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
             crossed: crossing.crossed,
-            score: crossing.crossed * 9000 + crossing.score * 1300 + Math.abs(route.meters - targetMeters) * 2.2 + i * 18
+            score: scoreRoute(route.meters, targetMeters, crossing, i)
           });
         } catch (error) {
           console.warn(error);
@@ -714,6 +762,15 @@
         crossed: crossing.crossed,
         fallback: true
       };
+    }
+
+    function scoreRoute(meters, targetMeters, crossing, index) {
+      const error = Math.abs(meters - targetMeters);
+      const tolerance = targetMeters * .1;
+      const distancePenalty = error <= tolerance
+        ? error * 1.1
+        : tolerance * 1.1 + (error - tolerance) * 36;
+      return crossing.crossed * 9000 + crossing.score * 1300 + distancePenalty + index * 18;
     }
 
     function routeAngle(points, index) {
@@ -746,6 +803,48 @@
         markers.push({ point: points[Math.min(points.length - 1, exitIndex + 1)], angle: routeAngle(points, exitIndex) });
       });
       return markers.slice(0, 8);
+    }
+
+    function detectOverlapSegments(points) {
+      const buckets = new Map();
+      const grid = 18;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+        if (distance(a, b) < 10) continue;
+        const aKey = `${Math.round(a.x / grid)},${Math.round(a.y / grid)}`;
+        const bKey = `${Math.round(b.x / grid)},${Math.round(b.y / grid)}`;
+        const key = [aKey, bKey].sort().join("|");
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(i);
+      }
+
+      const segmentIndices = new Set();
+      buckets.forEach((indices) => {
+        if (indices.length < 2) return;
+        if (!indices.some((index) => Math.abs(index - indices[0]) > 10)) return;
+        indices.forEach((index) => segmentIndices.add(index));
+      });
+
+      return [...segmentIndices]
+        .sort((a, b) => a - b)
+        .slice(0, 120)
+        .map((index) => [points[index], points[index + 1]]);
+    }
+
+    function drawOverlapSegments(points) {
+      detectOverlapSegments(points).forEach((segment) => {
+        const path = segment.map((point) => new kakao.maps.LatLng(point.lat, point.lng));
+        const line = new kakao.maps.Polyline({
+          path,
+          strokeWeight: 6,
+          strokeColor: "#f3727f",
+          strokeOpacity: .95,
+          strokeStyle: "shortdash"
+        });
+        line.setMap(map);
+        polylines.push(line);
+      });
     }
 
     function addPin(point, title) {
@@ -799,7 +898,7 @@
       const blueLine = new kakao.maps.Polyline({
         path,
         strokeWeight: 8,
-        strokeColor: "#3E6AE1",
+        strokeColor: "#1ed760",
         strokeOpacity: .98,
         strokeStyle: "solid"
       });
@@ -808,7 +907,7 @@
       polylines.push(whiteLine, blueLine);
 
       drawCrossings(route.passedCrossings);
-      detectOverlapMarkers(route.tmPoints).forEach((marker) => addArrow(marker.point, marker.angle));
+      drawOverlapSegments(route.tmPoints);
       addPin(start, "시작점");
       addPin(end, "도착점");
 
@@ -824,15 +923,16 @@
       statusEl.textContent = route.fallback
         ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
         : `${targetKm}km 목표에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
-      mapBadgeEl.textContent = `빨간 점 ${route.crossed}개는 이번 코스가 실제로 통과한 것으로 보는 신호등 있는 횡단 지점입니다.`;
+      mapBadgeEl.textContent = `초록 선은 추천 경로, 분홍 점선은 같은 길을 다시 지나는 구간입니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
     }
 
     async function makeRoute(reroll = false) {
       const startText = startInput.value.trim();
       const endText = endInput.value.trim();
       const targetKm = Number(document.querySelector("input[name='targetKm']:checked").value);
-      if (!startText || !endText) {
-        statusEl.textContent = "시작점과 도착점을 모두 입력해 주세요.";
+      const useLoop = loopRouteInput.checked || !endText;
+      if (!startText || (!useLoop && !endText)) {
+        statusEl.textContent = "시작점을 입력해 주세요. 루프가 아니라면 도착점도 필요합니다.";
         return;
       }
       if (!KAKAO_READY) return;
@@ -841,13 +941,17 @@
       rerouteBtn.disabled = true;
       statusEl.textContent = reroll
         ? `${targetKm}km 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
-        : `${targetKm}km 목표 거리와 신호등 있는 횡단 지점을 비교하고 있습니다.`;
+        : `${targetKm}km 목표 거리의 ±10% 범위와 신호등 있는 횡단 지점을 비교하고 있습니다.`;
 
       try {
         if (!reroll || !lastStart || !lastEnd) {
-          const results = await Promise.all([geocode(startText), geocode(endText)]);
-          lastStart = results[0];
-          lastEnd = results[1];
+          lastStart = await geocode(startText);
+          lastEnd = useLoop ? { ...lastStart, label: `${lastStart.label} 루프` } : await geocode(endText);
+          if (!useLoop && distance(lastStart, lastEnd) > targetKm * 1000) {
+            const error = new Error(`시작점과 도착점 사이의 직선거리가 ${targetKm}km보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
+            error.showAlert = true;
+            throw error;
+          }
           variantCursor = 0;
         } else {
           variantCursor += 1;
@@ -856,6 +960,7 @@
         drawRoute(lastStart, lastEnd, route, targetKm);
       } catch (error) {
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
+        if (error.showAlert) alert(error.message);
       } finally {
         makeRouteBtn.disabled = false;
         rerouteBtn.disabled = false;
@@ -888,6 +993,14 @@
         lastStart = null;
         lastEnd = null;
       });
+    });
+
+    loopRouteInput.addEventListener("change", () => {
+      lastStart = null;
+      lastEnd = null;
+      if (loopRouteInput.checked && !endInput.value.trim()) {
+        mapBadgeEl.textContent = "루프 코스는 도착점을 비워도 시작점으로 돌아옵니다.";
+      }
     });
 
     initMap();
