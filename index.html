@@ -131,22 +131,37 @@
 
     .button-row {
       display: grid;
-      grid-template-columns: 1fr 96px;
+      grid-template-columns: 1fr 48px;
       gap: 10px;
+      align-items: center;
     }
 
     #makeRoute {
-      min-height: 56px;
-      font-size: 18px;
-      letter-spacing: 1.8px;
+      min-height: 68px;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 2px;
     }
 
     #reroute {
-      min-height: 36px;
-      padding: 4px 10px;
-      font-size: 12px;
-      letter-spacing: .8px;
+      width: 44px;
+      min-height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: 0;
       align-self: center;
+    }
+
+    .watch-button {
+      width: 100%;
+      min-height: 44px;
+      color: var(--ink);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      letter-spacing: 1.1px;
     }
 
     button {
@@ -294,17 +309,18 @@
       background: #fff;
     }
 
-    .arrow-only {
-      width: 34px;
-      height: 34px;
+    .uturn-sign {
+      width: 58px;
+      height: 58px;
       display: grid;
       place-items: center;
-      color: #000;
-      background: var(--green);
+      border: 7px solid #ef233c;
       border-radius: 50%;
-      font-size: 28px;
+      color: #111;
+      background: #fff;
+      font-size: 34px;
+      font-weight: 900;
       line-height: 1;
-      transform: rotate(var(--angle));
     }
 
     @media (max-width: 900px) {
@@ -394,8 +410,9 @@
         </label>
         <div class="button-row">
           <button id="makeRoute" type="submit">RUN!</button>
-          <button id="reroute" class="secondary" type="button">다시 짜기</button>
+          <button id="reroute" class="secondary" type="button" aria-label="다시 짜기" title="다시 짜기">↻</button>
         </div>
+        <button id="sendWatch" class="watch-button" type="button">이 코스를 내 watch로 보내기</button>
       </form>
 
       <div class="quick">
@@ -416,7 +433,7 @@
 
     <main class="map-area">
       <div id="map"></div>
-      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 같은 길을 다시 지나는 구간은 평행한 두 줄로 표시합니다.</div>
+      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 루프 코스는 반환점을 U 표시로 보여줍니다.</div>
     </main>
   </div>
 
@@ -452,6 +469,7 @@
     const pickStartBtn = document.querySelector("#pickStart");
     const pickEndBtn = document.querySelector("#pickEnd");
     const loopRouteInput = document.querySelector("#loopRoute");
+    const sendWatchBtn = document.querySelector("#sendWatch");
 
     let map;
     let geocoder;
@@ -539,7 +557,7 @@
       pickEndBtn.classList.toggle("active", pickMode === "end");
       mapBadgeEl.textContent = pickMode
         ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
-        : "파란 선은 추천 러닝 코스입니다. 같은 길을 다시 지나는 구간은 평행한 두 줄로 표시합니다.";
+        : "파란 선은 추천 러닝 코스입니다. 루프 코스는 반환점을 U 표시로 보여줍니다.";
     }
 
     function addDraftPin(point, title, mode) {
@@ -563,6 +581,7 @@
       const point = { lat, lng, ...latLngToTm(lat, lng) };
       if (pickMode === "start") {
         startInput.value = value;
+        syncLoopDestination();
         addDraftPin(point, "시작점", "start");
       } else {
         endInput.value = value;
@@ -789,88 +808,70 @@
       return crossing.crossed * 9000 + crossing.score * 1300 + distancePenalty + index * 18;
     }
 
-    function routeAngle(points, index) {
-      const a = points[Math.max(0, Math.min(index, points.length - 2))];
-      const b = points[Math.max(1, Math.min(index + 1, points.length - 1))];
-      return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
-    }
-
-    function detectOverlapMarkers(points) {
-      const buckets = new Map();
-      const grid = 18;
-      for (let i = 0; i < points.length - 1; i += 1) {
-        const a = points[i];
-        const b = points[i + 1];
-        if (distance(a, b) < 10) continue;
-        const aKey = `${Math.round(a.x / grid)},${Math.round(a.y / grid)}`;
-        const bKey = `${Math.round(b.x / grid)},${Math.round(b.y / grid)}`;
-        const key = [aKey, bKey].sort().join("|");
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(i);
-      }
-
-      const markers = [];
-      buckets.forEach((indices) => {
-        if (indices.length < 2) return;
-        if (!indices.some((index) => Math.abs(index - indices[0]) > 10)) return;
-        const entryIndex = indices[0];
-        const exitIndex = indices[indices.length - 1];
-        markers.push({ point: points[entryIndex], angle: routeAngle(points, entryIndex) });
-        markers.push({ point: points[Math.min(points.length - 1, exitIndex + 1)], angle: routeAngle(points, exitIndex) });
-      });
-      return markers.slice(0, 8);
-    }
-
-    function detectOverlapSegments(points) {
-      const buckets = new Map();
-      const grid = 18;
-      for (let i = 0; i < points.length - 1; i += 1) {
-        const a = points[i];
-        const b = points[i + 1];
-        if (distance(a, b) < 10) continue;
-        const aKey = `${Math.round(a.x / grid)},${Math.round(a.y / grid)}`;
-        const bKey = `${Math.round(b.x / grid)},${Math.round(b.y / grid)}`;
-        const key = [aKey, bKey].sort().join("|");
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(i);
-      }
-
-      const segmentIndices = new Set();
-      buckets.forEach((indices) => {
-        if (indices.length < 2) return;
-        if (!indices.some((index) => Math.abs(index - indices[0]) > 10)) return;
-        indices.forEach((index) => segmentIndices.add(index));
-      });
-
-      return [...segmentIndices]
-        .sort((a, b) => a - b)
-        .slice(0, 120)
-        .map((index) => [points[index], points[index + 1]]);
-    }
-
-    function drawOverlapSegments(points) {
-      detectOverlapSegments(points).forEach((segment) => {
-        const dx = segment[1].x - segment[0].x;
-        const dy = segment[1].y - segment[0].y;
+    function offsetRoutePoints(points, offset) {
+      return points.map((point, index) => {
+        const prev = points[Math.max(0, index - 1)];
+        const next = points[Math.min(points.length - 1, index + 1)];
+        const dx = next.x - prev.x;
+        const dy = next.y - prev.y;
         const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len;
-        const ny = dx / len;
-        [-6, 6].forEach((offset) => {
-          const path = segment.map((point) => {
-            const shifted = tmToLatLng(point.x + nx * offset, point.y + ny * offset);
-            return new kakao.maps.LatLng(shifted.lat, shifted.lng);
-          });
-          const line = new kakao.maps.Polyline({
-            path,
-            strokeWeight: 4,
-            strokeColor: "#3E6AE1",
-            strokeOpacity: 1,
-            strokeStyle: "solid"
-          });
-          line.setMap(map);
-          polylines.push(line);
-        });
+        const shifted = tmToLatLng(point.x + (-dy / len) * offset, point.y + (dx / len) * offset);
+        return new kakao.maps.LatLng(shifted.lat, shifted.lng);
       });
+    }
+
+    function drawBlueRoute(path, weight = 8) {
+      const casing = new kakao.maps.Polyline({
+        path,
+        strokeWeight: weight + 7,
+        strokeColor: "#FFFFFF",
+        strokeOpacity: .94,
+        strokeStyle: "solid"
+      });
+      const line = new kakao.maps.Polyline({
+        path,
+        strokeWeight: weight,
+        strokeColor: "#3E6AE1",
+        strokeOpacity: .98,
+        strokeStyle: "solid"
+      });
+      casing.setMap(map);
+      line.setMap(map);
+      polylines.push(casing, line);
+      return line;
+    }
+
+    function findTurnaroundIndex(points, start) {
+      let bestIndex = 0;
+      let bestDistance = -1;
+      points.forEach((point, index) => {
+        const d = distance(point, start);
+        if (d > bestDistance) {
+          bestDistance = d;
+          bestIndex = index;
+        }
+      });
+      return Math.max(1, Math.min(points.length - 2, bestIndex));
+    }
+
+    function addUTurn(point) {
+      const overlay = new kakao.maps.CustomOverlay({
+        position: toLatLng(point),
+        content: `<div class="uturn-sign">↩</div>`,
+        xAnchor: .5,
+        yAnchor: .5
+      });
+      overlay.setMap(map);
+      overlays.push(overlay);
+    }
+
+    function drawLoopRoute(route, start) {
+      const turnIndex = findTurnaroundIndex(route.tmPoints, start);
+      const outbound = route.tmPoints.slice(0, turnIndex + 1);
+      const inbound = route.tmPoints.slice(turnIndex);
+      drawBlueRoute(offsetRoutePoints(outbound, -12), 7);
+      drawBlueRoute(offsetRoutePoints(inbound, 12), 7);
+      addUTurn(route.tmPoints[turnIndex]);
     }
 
     function addPin(point, title) {
@@ -878,17 +879,6 @@
         position: toLatLng(point),
         content: `<div class="pin" title="${title}"></div>`,
         yAnchor: 1
-      });
-      overlay.setMap(map);
-      overlays.push(overlay);
-    }
-
-    function addArrow(point, angle) {
-      const overlay = new kakao.maps.CustomOverlay({
-        position: toLatLng(point),
-        content: `<div class="arrow-only" style="--angle:${angle}deg">→</div>`,
-        xAnchor: .5,
-        yAnchor: .5
       });
       overlay.setMap(map);
       overlays.push(overlay);
@@ -914,26 +904,14 @@
       clearMap();
       clearDraftPins();
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
-      const whiteLine = new kakao.maps.Polyline({
-        path,
-        strokeWeight: 15,
-        strokeColor: "#FFFFFF",
-        strokeOpacity: .95,
-        strokeStyle: "solid"
-      });
-      const blueLine = new kakao.maps.Polyline({
-        path,
-        strokeWeight: 8,
-        strokeColor: "#3E6AE1",
-        strokeOpacity: .98,
-        strokeStyle: "solid"
-      });
-      whiteLine.setMap(map);
-      blueLine.setMap(map);
-      polylines.push(whiteLine, blueLine);
+      const isLoop = distance(start, end) < 80;
+      if (isLoop) {
+        drawLoopRoute(route, start);
+      } else {
+        drawBlueRoute(path, 8);
+      }
 
       drawCrossings(route.passedCrossings);
-      drawOverlapSegments(route.tmPoints);
       addPin(start, "시작점");
       addPin(end, "도착점");
 
@@ -949,7 +927,9 @@
       statusEl.textContent = route.fallback
         ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
         : `${targetKm}km 목표에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
-      mapBadgeEl.textContent = `파란 선은 추천 경로입니다. 같은 길을 다시 지나는 구간은 평행한 두 줄로 표시합니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
+      mapBadgeEl.textContent = isLoop
+        ? `파란 선은 가는 길과 오는 길을 분리해 표시한 루프 코스입니다. U 표시는 반환점입니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`
+        : `파란 선은 추천 경로입니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
     }
 
     async function makeRoute(reroll = false) {
@@ -1021,12 +1001,26 @@
       });
     });
 
+    function syncLoopDestination() {
+      if (!loopRouteInput.checked) return;
+      endInput.value = startInput.value;
+      lastStart = null;
+      lastEnd = null;
+    }
+
+    startInput.addEventListener("input", syncLoopDestination);
+
     loopRouteInput.addEventListener("change", () => {
       lastStart = null;
       lastEnd = null;
-      if (loopRouteInput.checked && !endInput.value.trim()) {
-        mapBadgeEl.textContent = "루프 코스는 도착점을 비워도 시작점으로 돌아옵니다.";
+      if (loopRouteInput.checked) {
+        endInput.value = startInput.value;
+        mapBadgeEl.textContent = "루프 코스는 도착점에 시작점이 자동으로 들어가고, 출발지로 돌아옵니다.";
       }
+    });
+
+    sendWatchBtn.addEventListener("click", () => {
+      alert("서비스 준비 중입니다");
     });
 
     initMap();
