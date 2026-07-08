@@ -309,20 +309,6 @@
       background: #fff;
     }
 
-    .uturn-sign {
-      width: 58px;
-      height: 58px;
-      display: grid;
-      place-items: center;
-      border: 7px solid #ef233c;
-      border-radius: 50%;
-      color: #111;
-      background: #fff;
-      font-size: 34px;
-      font-weight: 900;
-      line-height: 1;
-    }
-
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -400,8 +386,8 @@
         <label>
           목표 거리
           <div class="distance-options">
-            <label><input type="radio" name="targetKm" value="5" checked><span>5km</span></label>
-            <label><input type="radio" name="targetKm" value="10"><span>10km</span></label>
+            <label><input type="radio" name="targetRange" value="5-7" checked><span>5-7km</span></label>
+            <label><input type="radio" name="targetRange" value="8-10"><span>8-10km</span></label>
           </div>
         </label>
         <label class="loop-toggle">
@@ -425,7 +411,7 @@
         <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 RUN!을 눌러 주세요.</div>
         <div class="metric-grid">
           <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
-          <div class="metric"><b id="crossings">-</b><span>신호등 있는 횡단보도</span></div>
+          <div class="metric"><b id="crossings">-</b><span>신호등 있는 최대 횡단보도 수</span></div>
         </div>
         <p class="note">빨간 점은 전체 신호등 데이터가 아니라 이번 경로가 실제로 매우 가까이 지난 횡단 지점만 표시합니다.</p>
       </section>
@@ -433,7 +419,7 @@
 
     <main class="map-area">
       <div id="map"></div>
-      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 루프 코스는 반환점을 U 표시로 보여줍니다.</div>
+      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.</div>
     </main>
   </div>
 
@@ -557,7 +543,7 @@
       pickEndBtn.classList.toggle("active", pickMode === "end");
       mapBadgeEl.textContent = pickMode
         ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
-        : "파란 선은 추천 러닝 코스입니다. 루프 코스는 반환점을 U 표시로 보여줍니다.";
+        : "파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.";
     }
 
     function addDraftPin(point, title, mode) {
@@ -763,7 +749,8 @@
       return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
-    async function choosePedestrianRoute(start, end, targetMeters) {
+    async function choosePedestrianRoute(start, end, targetRange) {
+      const targetMeters = (targetRange.min + targetRange.max) / 2;
       const waypointSets = buildWaypointSets(start, end, targetMeters);
       const routes = [];
       for (let i = 0; i < waypointSets.length; i += 1) {
@@ -775,23 +762,31 @@
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
             crossed: crossing.crossed,
-            score: scoreRoute(route.meters, targetMeters, crossing, i)
+            score: scoreRoute(route.meters, targetRange, crossing, i)
           });
         } catch (error) {
           console.warn(error);
         }
       }
       if (routes.length) {
-        const ranked = routes.sort((a, b) => a.score - b.score);
+        const withinRange = routes.filter((route) => route.meters >= targetRange.min && route.meters <= targetRange.max);
+        if (!withinRange.length) {
+          throw new Error(`${formatKmRange(targetRange)} 사이의 보행자 코스를 찾지 못했습니다. 시작점/도착점을 다시 선택해 주세요.`);
+        }
+        const ranked = withinRange.sort((a, b) => a.score - b.score);
         return ranked[variantCursor % ranked.length];
       }
 
       const fallbackPoints = waypointSets[variantCursor % waypointSets.length];
       const crossing = analyzeCrossings(fallbackPoints);
+      const fallbackMeters = routeLength(fallbackPoints);
+      if (fallbackMeters < targetRange.min || fallbackMeters > targetRange.max) {
+        throw new Error(`${formatKmRange(targetRange)} 사이의 코스를 찾지 못했습니다. 다시 선택해 주세요.`);
+      }
       return {
         latLngs: fallbackPoints.map(tmPointToLatLng),
         tmPoints: fallbackPoints,
-        meters: routeLength(fallbackPoints),
+        meters: fallbackMeters,
         crossings: crossing.nearby,
         passedCrossings: crossing.passedCrossings,
         crossed: crossing.crossed,
@@ -799,25 +794,22 @@
       };
     }
 
-    function scoreRoute(meters, targetMeters, crossing, index) {
-      const error = Math.abs(meters - targetMeters);
-      const tolerance = targetMeters * .1;
-      const distancePenalty = error <= tolerance
-        ? error * 1.1
-        : tolerance * 1.1 + (error - tolerance) * 36;
-      return crossing.crossed * 9000 + crossing.score * 1300 + distancePenalty + index * 18;
+    function scoreRoute(meters, targetRange, crossing, index) {
+      const center = (targetRange.min + targetRange.max) / 2;
+      const error = Math.abs(meters - center);
+      const outside = meters < targetRange.min ? targetRange.min - meters : meters > targetRange.max ? meters - targetRange.max : 0;
+      const distancePenalty = error * 1.2 + outside * 160;
+      return distancePenalty + crossing.crossed * 4500 + crossing.score * 850 + index * 18;
     }
 
-    function offsetRoutePoints(points, offset) {
-      return points.map((point, index) => {
-        const prev = points[Math.max(0, index - 1)];
-        const next = points[Math.min(points.length - 1, index + 1)];
-        const dx = next.x - prev.x;
-        const dy = next.y - prev.y;
-        const len = Math.hypot(dx, dy) || 1;
-        const shifted = tmToLatLng(point.x + (-dy / len) * offset, point.y + (dx / len) * offset);
-        return new kakao.maps.LatLng(shifted.lat, shifted.lng);
-      });
+    function parseTargetRange() {
+      const value = document.querySelector("input[name='targetRange']:checked").value;
+      const [minKm, maxKm] = value.split("-").map(Number);
+      return { min: minKm * 1000, max: maxKm * 1000, label: value };
+    }
+
+    function formatKmRange(range) {
+      return `${Math.round(range.min / 1000)}-${Math.round(range.max / 1000)}km`;
     }
 
     function drawBlueRoute(path, weight = 8) {
@@ -839,39 +831,6 @@
       line.setMap(map);
       polylines.push(casing, line);
       return line;
-    }
-
-    function findTurnaroundIndex(points, start) {
-      let bestIndex = 0;
-      let bestDistance = -1;
-      points.forEach((point, index) => {
-        const d = distance(point, start);
-        if (d > bestDistance) {
-          bestDistance = d;
-          bestIndex = index;
-        }
-      });
-      return Math.max(1, Math.min(points.length - 2, bestIndex));
-    }
-
-    function addUTurn(point) {
-      const overlay = new kakao.maps.CustomOverlay({
-        position: toLatLng(point),
-        content: `<div class="uturn-sign">↩</div>`,
-        xAnchor: .5,
-        yAnchor: .5
-      });
-      overlay.setMap(map);
-      overlays.push(overlay);
-    }
-
-    function drawLoopRoute(route, start) {
-      const turnIndex = findTurnaroundIndex(route.tmPoints, start);
-      const outbound = route.tmPoints.slice(0, turnIndex + 1);
-      const inbound = route.tmPoints.slice(turnIndex);
-      drawBlueRoute(offsetRoutePoints(outbound, -12), 7);
-      drawBlueRoute(offsetRoutePoints(inbound, 12), 7);
-      addUTurn(route.tmPoints[turnIndex]);
     }
 
     function addPin(point, title) {
@@ -900,16 +859,11 @@
       });
     }
 
-    function drawRoute(start, end, route, targetKm) {
+    function drawRoute(start, end, route, targetRange) {
       clearMap();
       clearDraftPins();
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
-      const isLoop = distance(start, end) < 80;
-      if (isLoop) {
-        drawLoopRoute(route, start);
-      } else {
-        drawBlueRoute(path, 8);
-      }
+      drawBlueRoute(path, 8);
 
       drawCrossings(route.passedCrossings);
       addPin(start, "시작점");
@@ -926,16 +880,14 @@
       crossingsEl.textContent = `${route.crossed}개`;
       statusEl.textContent = route.fallback
         ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
-        : `${targetKm}km 목표에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
-      mapBadgeEl.textContent = isLoop
-        ? `파란 선은 가는 길과 오는 길을 분리해 표시한 루프 코스입니다. U 표시는 반환점입니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`
-        : `파란 선은 추천 경로입니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
+        : `${formatKmRange(targetRange)} 조건에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
+      mapBadgeEl.textContent = `파란 선은 추천 경로입니다. 루프/왕복 구간도 하나의 선으로 표시합니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
     }
 
     async function makeRoute(reroll = false) {
       const startText = startInput.value.trim();
       const endText = endInput.value.trim();
-      const targetKm = Number(document.querySelector("input[name='targetKm']:checked").value);
+      const targetRange = parseTargetRange();
       const useLoop = loopRouteInput.checked || !endText;
       if (!startText || (!useLoop && !endText)) {
         statusEl.textContent = "시작점을 입력해 주세요. 루프가 아니라면 도착점도 필요합니다.";
@@ -946,15 +898,15 @@
       makeRouteBtn.disabled = true;
       rerouteBtn.disabled = true;
       statusEl.textContent = reroll
-        ? `${targetKm}km 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
-        : `${targetKm}km 목표 거리의 ±10% 범위와 신호등 있는 횡단 지점을 비교하고 있습니다.`;
+        ? `${formatKmRange(targetRange)} 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
+        : `${formatKmRange(targetRange)} 범위 안에서 신호등 있는 횡단 지점을 비교하고 있습니다.`;
 
       try {
         if (!reroll || !lastStart || !lastEnd) {
           lastStart = await geocode(startText);
           lastEnd = useLoop ? { ...lastStart, label: `${lastStart.label} 루프` } : await geocode(endText);
-          if (!useLoop && distance(lastStart, lastEnd) > targetKm * 1000) {
-            const error = new Error(`시작점과 도착점 사이의 직선거리가 ${targetKm}km보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
+          if (!useLoop && distance(lastStart, lastEnd) > targetRange.max) {
+            const error = new Error(`시작점과 도착점 사이의 직선거리가 ${formatKmRange(targetRange)}의 최대 거리보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
             error.showAlert = true;
             throw error;
           }
@@ -962,8 +914,8 @@
         } else {
           variantCursor += 1;
         }
-        const route = await choosePedestrianRoute(lastStart, lastEnd, targetKm * 1000);
-        drawRoute(lastStart, lastEnd, route, targetKm);
+        const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        drawRoute(lastStart, lastEnd, route, targetRange);
       } catch (error) {
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
         if (error.showAlert) alert(error.message);
@@ -994,7 +946,7 @@
       });
     });
 
-    document.querySelectorAll("input[name='targetKm']").forEach((input) => {
+    document.querySelectorAll("input[name='targetRange']").forEach((input) => {
       input.addEventListener("change", () => {
         lastStart = null;
         lastEnd = null;
