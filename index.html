@@ -820,6 +820,14 @@
       return `${Math.round(range.min / 1000)}-${Math.round(range.max / 1000)}km`;
     }
 
+    function trackAnalyticsEvent(eventName, params = {}) {
+      if (typeof gtag !== "function") return;
+      gtag("event", eventName, {
+        app_name: "STOPLESS",
+        ...params
+      });
+    }
+
     function drawBlueRoute(path, weight = 8) {
       const casing = new kakao.maps.Polyline({
         path,
@@ -935,6 +943,12 @@
 
     document.querySelector("#routeForm").addEventListener("submit", (event) => {
       event.preventDefault();
+      const targetRange = parseTargetRange();
+      trackAnalyticsEvent("run_click", {
+        button_text: "RUN!",
+        target_range: formatKmRange(targetRange),
+        loop_route: loopRouteInput.checked ? "yes" : "no"
+      });
       makeRoute(false);
     });
 
@@ -980,6 +994,9 @@
     });
 
     sendWatchBtn.addEventListener("click", () => {
+      trackAnalyticsEvent("watch_send_click", {
+        button_text: "이 코스를 내 WATCH로 보내기"
+      });
       alert("서비스 준비 중입니다");
     });
 
