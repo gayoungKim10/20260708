@@ -1,0 +1,818 @@
+<!DOCTYPE HTML>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서초 러너 AI 코스</title>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
+  <style>
+    :root {
+      --ink: #171717;
+      --muted: #666;
+      --line: #d9d9d9;
+      --paper: #f7f7f4;
+      --blue: #3E6AE1;
+      --blue-dark: #2f55b8;
+      --red: #dc2626;
+      --soft-blue: #eef3ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Pretendard", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(350px, 420px) minmax(0, 1fr);
+    }
+
+    .panel {
+      z-index: 10;
+      padding: 32px;
+      border-right: 0;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 40px);
+      font-weight: 500;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 13px;
+      border: 1px solid #c8c8c8;
+      border-radius: 4px;
+      color: var(--ink);
+      background: #fff;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(62, 106, 225, .16);
+    }
+
+    .distance-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .distance-options input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .distance-options span {
+      display: grid;
+      min-height: 44px;
+      place-items: center;
+      border: 1px solid #c9c9c9;
+      border-radius: 4px;
+      color: #2b2b2b;
+      background: #fff;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .distance-options input:checked + span {
+      border-color: var(--blue);
+      color: var(--blue-dark);
+      background: var(--soft-blue);
+      box-shadow: inset 0 0 0 1px var(--blue);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    button {
+      min-height: 46px;
+      border: 1px solid var(--blue-dark);
+      border-radius: 4px;
+      padding: 0 15px;
+      color: #fff;
+      background: var(--blue);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: none;
+      transition: border-color .33s, background-color .33s, color .33s;
+    }
+
+    button:hover { background: var(--blue-dark); }
+    button:active { background: var(--blue-dark); }
+    button:disabled { opacity: .55; cursor: wait; }
+
+    button.secondary {
+      color: #171717;
+      background: #fff;
+      border-color: #bdbdbd;
+    }
+
+    button.secondary:hover { background: #f0f0f0; }
+
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 34px;
+      padding: 0 10px;
+      color: #202020;
+      background: #f3f3f3;
+      border-color: #d1d1d1;
+      box-shadow: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .result {
+      display: grid;
+      gap: 14px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+
+    .status {
+      min-height: 28px;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .metric b {
+      display: block;
+      color: var(--blue-dark);
+      font-size: 19px;
+      line-height: 1.15;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .map-area {
+      position: relative;
+      min-width: 0;
+      min-height: 100%;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f4f4f4;
+    }
+
+    .map-badge {
+      position: absolute;
+      z-index: 500;
+      left: 18px;
+      bottom: 18px;
+      max-width: min(570px, calc(100% - 36px));
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 0, 0, .16);
+      border-radius: 4px;
+      color: #333;
+      background: rgba(255, 255, 255, .94);
+      font-size: 13px;
+      line-height: 1.45;
+      backdrop-filter: blur(8px);
+    }
+
+    .pin-icon {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      background: var(--red);
+      transform: rotate(-45deg);
+      box-shadow: none;
+    }
+
+    .pin-icon::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      left: 8px;
+      top: 8px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .overlap-arrow {
+      display: grid;
+      grid-template-columns: 28px auto;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border: 1px solid rgba(23, 26, 32, .16);
+      border-radius: 4px;
+      color: #171A20;
+      background: rgba(255, 255, 255, .94);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .overlap-arrow i {
+      display: grid;
+      width: 28px;
+      height: 18px;
+      place-items: center;
+      color: var(--blue);
+      font-style: normal;
+      font-size: 21px;
+      line-height: 1;
+      transform: rotate(var(--angle));
+      transform-origin: center;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 64vh;
+      }
+
+      .panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .button-row,
+      .metric-grid,
+      .distance-options { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <section>
+        <h1>서초 러너 AI 코스</h1>
+        <p>보행자 도로를 따라 달리면서, 서초구 신호등 데이터를 기준으로 횡단보도와 신호 지점을 최대한 덜 만나는 코스를 추천합니다.</p>
+      </section>
+
+      <form id="routeForm">
+        <label>
+          시작점
+          <input id="startInput" placeholder="예: 교대역, 양재역, 37.4937, 127.0142">
+        </label>
+        <label>
+          도착점
+          <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
+        </label>
+        <label>
+          목표 거리
+          <div class="distance-options">
+            <label><input type="radio" name="targetKm" value="5" checked><span>5km</span></label>
+            <label><input type="radio" name="targetKm" value="10"><span>10km</span></label>
+          </div>
+        </label>
+        <div class="button-row">
+          <button id="makeRoute" type="submit">AI 추천코스</button>
+          <button id="reroute" class="secondary" type="button">다시 짜기</button>
+        </div>
+      </form>
+
+      <div class="quick">
+        <button class="chip" type="button" data-start="교대역" data-end="예술의전당">교대역 → 예술의전당</button>
+        <button class="chip" type="button" data-start="고속터미널역" data-end="반포종합운동장">고속터미널 → 반포</button>
+        <button class="chip" type="button" data-start="양재역" data-end="양재천 카페거리">양재역 → 양재천</button>
+      </div>
+
+      <section class="result">
+        <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 AI 추천코스를 눌러 주세요.</div>
+        <div class="metric-grid">
+          <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
+          <div class="metric"><b id="duration">-</b><span>예상 시간</span></div>
+          <div class="metric"><b id="crossings">-</b><span>지나간 횡단보도 수</span></div>
+        </div>
+        <p class="note">지도에는 전체 엑셀 점을 뿌리지 않습니다. 빨간 점은 이번 추천 코스가 지나간 것으로 계산된 횡단 지점만 표시합니다.</p>
+      </section>
+    </aside>
+
+    <main class="map-area">
+      <div id="map"></div>
+      <div class="map-badge" id="mapBadge">파란 선은 보행자 도로 기반 추천 코스입니다. 빨간 점은 지나간 횡단 지점입니다.</div>
+    </main>
+  </div>
+
+  <script src="./traffic-lights.js"></script>
+  <script>
+    const SEOCHO_CENTER = [37.4837, 127.0324];
+    const RUN_PACE_MIN_PER_KM = 6 + 20 / 60;
+    const lightRows = window.SEOCHO_TRAFFIC_LIGHTS || [];
+    const landmarks = {
+      "교대역": [37.4937, 127.0142],
+      "고속터미널역": [37.5049, 127.0049],
+      "반포종합운동장": [37.4999, 126.9967],
+      "예술의전당": [37.4803, 127.0115],
+      "양재역": [37.4846, 127.0344],
+      "양재천 카페거리": [37.4775, 127.0397],
+      "강남역": [37.4979, 127.0276],
+      "서초구청": [37.4836, 127.0327],
+      "내방역": [37.4876, 126.9936],
+      "사당역": [37.4766, 126.9816],
+      "방배역": [37.4814, 126.9976],
+      "남부터미널역": [37.4850, 127.0162],
+      "서울고등학교": [37.4864, 127.0086]
+    };
+
+    const statusEl = document.querySelector("#status");
+    const distanceEl = document.querySelector("#distance");
+    const durationEl = document.querySelector("#duration");
+    const crossingsEl = document.querySelector("#crossings");
+    const mapBadgeEl = document.querySelector("#mapBadge");
+    const startInput = document.querySelector("#startInput");
+    const endInput = document.querySelector("#endInput");
+    const makeRouteBtn = document.querySelector("#makeRoute");
+    const rerouteBtn = document.querySelector("#reroute");
+
+    let routeLayer;
+    let markerLayer;
+    let crossingLayer;
+    let lastStart = null;
+    let lastEnd = null;
+    let variantCursor = 0;
+
+    if (typeof proj4 === "function") {
+      proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
+    }
+
+    function tmToLatLng(x, y) {
+      if (typeof proj4 === "function") {
+        const result = proj4("EPSG:5186", "WGS84", [x, y]);
+        return { lat: result[1], lng: result[0], x, y };
+      }
+      const lat = 38 + ((y - 600000) / 111000);
+      const lng = 127 + ((x - 200000) / (111000 * Math.cos(lat * Math.PI / 180)));
+      return { lat, lng, x, y };
+    }
+
+    function latLngToTm(lat, lng) {
+      if (typeof proj4 === "function") {
+        const result = proj4("WGS84", "EPSG:5186", [lng, lat]);
+        return { x: result[0], y: result[1] };
+      }
+      return {
+        x: 200000 + (lng - 127) * 111000 * Math.cos(lat * Math.PI / 180),
+        y: 600000 + (lat - 38) * 111000
+      };
+    }
+
+    const trafficLights = lightRows.map(([id, addr, name, x, y]) => ({
+      id,
+      addr,
+      name,
+      ...tmToLatLng(x, y)
+    })).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+    const map = L.map("map").setView(SEOCHO_CENTER, 13);
+    map.setMaxBounds([[32, 123], [44, 132.5]]);
+
+    L.tileLayer("https://tiles.osm.kr/hot/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap 기여자</a>'
+    }).addTo(map);
+
+    L.control.scale({ imperial: false, metric: true }).addTo(map);
+    crossingLayer = L.layerGroup().addTo(map);
+    routeLayer = L.layerGroup().addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
+
+    function parseCoordinate(text) {
+      const match = text.trim().match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+      if (!match) return null;
+      const a = Number(match[1]);
+      const b = Number(match[2]);
+      if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return { lat: a, lng: b, label: text.trim(), ...latLngToTm(a, b) };
+      if (Math.abs(b) <= 90 && Math.abs(a) <= 180) return { lat: b, lng: a, label: text.trim(), ...latLngToTm(b, a) };
+      return null;
+    }
+
+    function findLocalPlace(text) {
+      const normalized = text.trim().replace(/\s/g, "");
+      for (const [name, latLng] of Object.entries(landmarks)) {
+        const key = name.replace(/\s/g, "");
+        if (key.includes(normalized) || normalized.includes(key)) {
+          const tm = latLngToTm(latLng[0], latLng[1]);
+          return { label: name, lat: latLng[0], lng: latLng[1], ...tm };
+        }
+      }
+      const hit = trafficLights.find((p) => {
+        const haystack = `${p.addr} ${p.name}`.replace(/\s/g, "");
+        return normalized.length >= 2 && haystack.includes(normalized);
+      });
+      if (hit) return { label: hit.name && hit.name !== "-" ? hit.name : hit.addr, ...hit };
+      return null;
+    }
+
+    async function geocode(text) {
+      const coord = parseCoordinate(text);
+      if (coord) return coord;
+      const local = findLocalPlace(text);
+      if (local) return local;
+
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("format", "jsonv2");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("countrycodes", "kr");
+      url.searchParams.set("q", `서울 서초구 ${text}`);
+      const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error("주소 검색에 실패했습니다.");
+      const rows = await response.json();
+      if (!rows.length) throw new Error(`"${text}" 위치를 찾지 못했습니다. 더 구체적인 장소명이나 위도/경도를 입력해 주세요.`);
+      const lat = Number(rows[0].lat);
+      const lng = Number(rows[0].lon);
+      return { label: rows[0].display_name.split(",")[0] || text, lat, lng, ...latLngToTm(lat, lng) };
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function pointToSegmentDistance(p, a, b) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      if (!dx && !dy) return distance(p, a);
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    }
+
+    function routeLength(points) {
+      return points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
+    }
+
+    function latLngToRoutePoint(lat, lng) {
+      return { lat, lng, ...latLngToTm(lat, lng) };
+    }
+
+    function tmPointToLatLng(point) {
+      const p = tmToLatLng(point.x, point.y);
+      return [p.lat, p.lng];
+    }
+
+    function buildWaypointSets(start, end, targetMeters) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const direct = Math.max(distance(start, end), 1);
+      const nx = -dy / direct;
+      const ny = dx / direct;
+      const tx = dx / direct;
+      const ty = dy / direct;
+      const detour = Math.max(targetMeters - direct, targetMeters * .45);
+      const side = Math.min(Math.max(detour / 2.4, 650), targetMeters / 2.1);
+      const forward = Math.min(Math.max(targetMeters / 5.5, 550), 1700);
+      const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+      const signs = [1, -1, 1.35, -1.35, .72, -.72];
+
+      return signs.map((sign, index) => {
+        const spread = side * sign;
+        const push = forward * ((index % 2) ? -.45 : .45);
+        const a = {
+          x: center.x - tx * forward + nx * spread + tx * push,
+          y: center.y - ty * forward + ny * spread + ty * push
+        };
+        const b = {
+          x: center.x + tx * forward + nx * spread * .9 - tx * push,
+          y: center.y + ty * forward + ny * spread * .9 - ty * push
+        };
+        const c = {
+          x: center.x + nx * spread * .35 - tx * forward * .2,
+          y: center.y + ny * spread * .35 - ty * forward * .2
+        };
+        return index < 2 ? [start, a, b, end] : [start, a, c, b, end];
+      });
+    }
+
+    async function fetchPedestrianRoute(points) {
+      const coords = points.map(tmPointToLatLng).map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join(";");
+      const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?overview=full&geometries=geojson&steps=false`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("보행자 경로 API 응답이 없습니다.");
+      const data = await response.json();
+      if (!data.routes || !data.routes[0]) throw new Error("보행자 경로를 찾지 못했습니다.");
+      const route = data.routes[0];
+      const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+      const tmPoints = latLngs.map(([lat, lng]) => latLngToRoutePoint(lat, lng));
+      return { latLngs, tmPoints, meters: route.distance };
+    }
+
+    function analyzeCrossings(tmPoints) {
+      const minX = Math.min(...tmPoints.map((p) => p.x)) - 120;
+      const maxX = Math.max(...tmPoints.map((p) => p.x)) + 120;
+      const minY = Math.min(...tmPoints.map((p) => p.y)) - 120;
+      const maxY = Math.max(...tmPoints.map((p) => p.y)) + 120;
+      const nearby = [];
+      let score = 0;
+
+      trafficLights.forEach((light) => {
+        if (light.x < minX || light.x > maxX || light.y < minY || light.y > maxY) return;
+        let nearest = Infinity;
+        for (let i = 0; i < tmPoints.length - 1; i += 1) {
+          nearest = Math.min(nearest, pointToSegmentDistance(light, tmPoints[i], tmPoints[i + 1]));
+          if (nearest < 24) break;
+        }
+        if (nearest < 70) {
+          nearby.push({ ...light, nearest });
+          score += (70 - nearest) / 70;
+        } else if (nearest < 140) {
+          score += (140 - nearest) / 280;
+        }
+      });
+
+      nearby.sort((a, b) => a.nearest - b.nearest);
+      const clusters = [];
+      nearby.filter((p) => p.nearest < 28).forEach((point) => {
+        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 45));
+        if (cluster) cluster.push(point);
+        else clusters.push([point]);
+      });
+      const crossed = clusters.length;
+      const passedCrossings = clusters.map((cluster) => cluster[0]);
+      return { nearby, passedCrossings, score, crossed };
+    }
+
+    async function choosePedestrianRoute(start, end, targetMeters) {
+      const waypointSets = buildWaypointSets(start, end, targetMeters);
+      const routes = [];
+      for (let i = 0; i < waypointSets.length; i += 1) {
+        try {
+          const route = await fetchPedestrianRoute(waypointSets[(i + variantCursor) % waypointSets.length]);
+          const crossing = analyzeCrossings(route.tmPoints);
+          routes.push({
+            ...route,
+            crossings: crossing.nearby,
+            passedCrossings: crossing.passedCrossings,
+            close: crossing.nearby.length,
+            crossed: crossing.crossed,
+            score: Math.abs(route.meters - targetMeters) * 2.8 + crossing.score * 850 + i * 25
+          });
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+
+      if (routes.length) return routes.sort((a, b) => a.score - b.score)[0];
+
+      const fallbackPoints = buildWaypointSets(start, end, targetMeters)[variantCursor % waypointSets.length];
+      const tmPoints = fallbackPoints;
+      const latLngs = fallbackPoints.map(tmPointToLatLng);
+      const crossing = analyzeCrossings(tmPoints);
+      return {
+        latLngs,
+        tmPoints,
+        meters: routeLength(tmPoints),
+        crossings: crossing.nearby,
+        passedCrossings: crossing.passedCrossings,
+        close: crossing.nearby.length,
+        crossed: crossing.crossed,
+        fallback: true
+      };
+    }
+
+    function pinIcon() {
+      return L.divIcon({
+        className: "",
+        html: "<div class='pin-icon'></div>",
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+      });
+    }
+
+    function overlapArrowIcon(label, angle) {
+      return L.divIcon({
+        className: "",
+        html: `<div class="overlap-arrow"><i style="--angle:${angle}deg">→</i><span>${label}</span></div>`,
+        iconSize: [78, 30],
+        iconAnchor: [14, 15]
+      });
+    }
+
+    function routeAngle(points, index) {
+      const a = points[Math.max(0, Math.min(index, points.length - 2))];
+      const b = points[Math.max(1, Math.min(index + 1, points.length - 1))];
+      return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    }
+
+    function detectOverlapMarkers(points) {
+      const buckets = new Map();
+      const grid = 22;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+        if (distance(a, b) < 12) continue;
+        const aKey = `${Math.round(a.x / grid)},${Math.round(a.y / grid)}`;
+        const bKey = `${Math.round(b.x / grid)},${Math.round(b.y / grid)}`;
+        const key = [aKey, bKey].sort().join("|");
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(i);
+      }
+
+      const markers = [];
+      buckets.forEach((indices) => {
+        if (indices.length < 2) return;
+        const separated = indices.some((index, _, arr) => Math.abs(index - arr[0]) > 8);
+        if (!separated) return;
+        const entryIndex = Math.max(0, indices[0]);
+        const exitIndex = Math.min(points.length - 2, indices[indices.length - 1]);
+        markers.push({ label: "겹침 진입", point: points[entryIndex], angle: routeAngle(points, entryIndex) });
+        markers.push({ label: "겹침 이탈", point: points[exitIndex + 1], angle: routeAngle(points, exitIndex) });
+      });
+
+      return markers.slice(0, 8);
+    }
+
+    function drawOverlapArrows(route) {
+      detectOverlapMarkers(route.tmPoints).forEach((marker) => {
+        L.marker(tmPointToLatLng(marker.point), {
+          icon: overlapArrowIcon(marker.label, marker.angle),
+          interactive: false
+        }).addTo(routeLayer);
+      });
+    }
+
+    function drawCrossings(crossings) {
+      crossingLayer.clearLayers();
+      crossings.slice(0, 35).forEach((p) => {
+        L.circleMarker([p.lat, p.lng], {
+          radius: 5,
+          color: "rgba(180, 0, 0, .75)",
+          weight: 1,
+          fillColor: "#dc2626",
+          fillOpacity: .65
+        }).bindTooltip(p.name && p.name !== "-" ? p.name : p.addr, { sticky: true }).addTo(crossingLayer);
+      });
+    }
+
+    function drawRoute(start, end, route, targetKm) {
+      routeLayer.clearLayers();
+      markerLayer.clearLayers();
+      drawCrossings(route.passedCrossings);
+
+      L.polyline(route.latLngs, {
+        color: "#ffffff",
+        weight: 15,
+        opacity: .96,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(routeLayer);
+      const blueLine = L.polyline(route.latLngs, {
+        color: "#3E6AE1",
+        weight: 9,
+        opacity: .98,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(routeLayer);
+      drawOverlapArrows(route);
+
+      L.marker([start.lat, start.lng], { icon: pinIcon() }).bindPopup(`시작점: ${start.label}`).addTo(markerLayer);
+      L.marker([end.lat, end.lng], { icon: pinIcon() }).bindPopup(`도착점: ${end.label}`).addTo(markerLayer);
+      map.fitBounds(blueLine.getBounds().pad(.22));
+
+      const km = route.meters / 1000;
+      distanceEl.textContent = `${km.toFixed(2)} km`;
+      durationEl.textContent = `${Math.max(1, Math.round(km * RUN_PACE_MIN_PER_KM))}분`;
+      crossingsEl.textContent = `${route.crossed}개`;
+      statusEl.textContent = route.fallback
+        ? `보행자 API 연결이 불안정해서 임시 후보선을 표시했습니다. ${targetKm}km에 가까운 경로를 다시 시도해 주세요.`
+        : `${targetKm}km 목표에 맞춰 보행자 인도/보행 가능 도로 위 추천 코스를 만들었습니다. 지나간 횡단보도는 ${route.crossed}개입니다.`;
+      mapBadgeEl.textContent = `빨간 점은 안 지난 곳이 아니라, 이번 코스가 지나간 것으로 계산된 횡단 지점 ${route.crossed}개입니다.`;
+    }
+
+    async function makeRoute(reroll = false) {
+      const startText = startInput.value.trim();
+      const endText = endInput.value.trim();
+      const targetKm = Number(document.querySelector("input[name='targetKm']:checked").value);
+      if (!startText || !endText) {
+        statusEl.textContent = "시작점과 도착점을 모두 입력해 주세요.";
+        return;
+      }
+
+      makeRouteBtn.disabled = true;
+      rerouteBtn.disabled = true;
+      statusEl.textContent = reroll
+        ? `${targetKm}km에 맞는 다른 보행자 코스를 다시 계산 중입니다.`
+        : `${targetKm}km 목표 거리와 신호 지점을 고려해 보행자 코스를 계산 중입니다.`;
+
+      try {
+        if (!reroll || !lastStart || !lastEnd) {
+          const results = await Promise.all([geocode(startText), geocode(endText)]);
+          lastStart = results[0];
+          lastEnd = results[1];
+          variantCursor = 0;
+        } else {
+          variantCursor += 1;
+        }
+        const route = await choosePedestrianRoute(lastStart, lastEnd, targetKm * 1000);
+        drawRoute(lastStart, lastEnd, route, targetKm);
+      } catch (error) {
+        statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
+      } finally {
+        makeRouteBtn.disabled = false;
+        rerouteBtn.disabled = false;
+      }
+    }
+
+    document.querySelector("#routeForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      makeRoute(false);
+    });
+
+    rerouteBtn.addEventListener("click", () => makeRoute(true));
+
+    document.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        startInput.value = button.dataset.start;
+        endInput.value = button.dataset.end;
+        makeRoute(false);
+      });
+    });
+
+    document.querySelectorAll("input[name='targetKm']").forEach((input) => {
+      input.addEventListener("change", () => {
+        lastStart = null;
+        lastEnd = null;
+      });
+    });
+
+    startInput.value = "교대역";
+    endInput.value = "예술의전당";
+  </script>
+</body>
+</html>
