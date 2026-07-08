@@ -4,19 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>서초 러너 AI 코스</title>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=127d37705c82c57a9792ec156edc788b&libraries=services"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <style>
     :root {
-      --ink: #171717;
-      --muted: #666;
-      --line: #d9d9d9;
-      --paper: #f7f7f4;
       --blue: #3E6AE1;
       --blue-dark: #2f55b8;
-      --red: #dc2626;
-      --soft-blue: #eef3ff;
+      --ink: #171A20;
+      --graphite: #393C41;
+      --pewter: #5C5E62;
+      --fog: #8E8E8E;
+      --line: #EEEEEE;
+      --ash: #F4F4F4;
+      --red: #D92027;
+      --white: #FFFFFF;
     }
 
     * { box-sizing: border-box; }
@@ -27,21 +28,20 @@
       height: 100%;
       margin: 0;
       color: var(--ink);
-      background: var(--paper);
-      font-family: "Pretendard", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--white);
+      font-family: "Pretendard", "Segoe UI", -apple-system, Arial, sans-serif;
     }
 
     .app {
       height: 100%;
       display: grid;
-      grid-template-columns: minmax(350px, 420px) minmax(0, 1fr);
+      grid-template-columns: minmax(340px, 408px) minmax(0, 1fr);
     }
 
     .panel {
       z-index: 10;
       padding: 32px;
-      border-right: 0;
-      background: #fff;
+      background: var(--white);
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -50,17 +50,19 @@
 
     h1 {
       margin: 0;
+      color: var(--ink);
       font-size: clamp(30px, 4vw, 40px);
       font-weight: 500;
-      line-height: 1.05;
+      line-height: 1.2;
       letter-spacing: 0;
     }
 
     p {
       margin: 8px 0 0;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.55;
+      color: var(--graphite);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.43;
     }
 
     form {
@@ -71,25 +73,30 @@
     label {
       display: grid;
       gap: 7px;
-      font-size: 13px;
+      color: var(--ink);
+      font-size: 14px;
       font-weight: 500;
+      line-height: 1.2;
     }
 
     input {
       width: 100%;
-      min-height: 48px;
-      padding: 0 13px;
-      border: 1px solid #c8c8c8;
+      min-height: 42px;
+      border: 1px solid #D0D1D2;
       border-radius: 4px;
+      padding: 0 12px;
       color: var(--ink);
-      background: #fff;
+      background: var(--white);
       font: inherit;
       outline: none;
+      transition: border-color .33s, box-shadow .25s;
     }
+
+    input::placeholder { color: var(--fog); }
 
     input:focus {
       border-color: var(--blue);
-      box-shadow: 0 0 0 2px rgba(62, 106, 225, .16);
+      box-shadow: inset 0 0 0 1px var(--blue);
     }
 
     .distance-options {
@@ -106,54 +113,56 @@
 
     .distance-options span {
       display: grid;
-      min-height: 44px;
+      min-height: 40px;
       place-items: center;
-      border: 1px solid #c9c9c9;
+      border: 1px solid #D0D1D2;
       border-radius: 4px;
-      color: #2b2b2b;
-      background: #fff;
+      color: var(--graphite);
+      background: var(--white);
       font-weight: 500;
       cursor: pointer;
+      transition: border-color .33s, background-color .33s, color .33s;
     }
 
     .distance-options input:checked + span {
       border-color: var(--blue);
-      color: var(--blue-dark);
-      background: var(--soft-blue);
-      box-shadow: inset 0 0 0 1px var(--blue);
+      color: var(--white);
+      background: var(--blue);
     }
 
     .button-row {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr 132px;
       gap: 10px;
     }
 
     button {
-      min-height: 46px;
-      border: 1px solid var(--blue-dark);
+      min-height: 40px;
+      border: 3px solid transparent;
       border-radius: 4px;
-      padding: 0 15px;
-      color: #fff;
+      padding: 4px 16px;
+      color: var(--white);
       background: var(--blue);
       font: inherit;
+      font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      box-shadow: none;
-      transition: border-color .33s, background-color .33s, color .33s;
+      transition: border-color .33s, background-color .33s, color .33s, box-shadow .25s;
     }
 
     button:hover { background: var(--blue-dark); }
-    button:active { background: var(--blue-dark); }
+    button:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
     button:disabled { opacity: .55; cursor: wait; }
 
     button.secondary {
-      color: #171717;
-      background: #fff;
-      border-color: #bdbdbd;
+      color: var(--graphite);
+      background: var(--white);
+      border-color: #D0D1D2;
     }
 
-    button.secondary:hover { background: #f0f0f0; }
+    button.secondary:hover {
+      background: var(--ash);
+    }
 
     .quick {
       display: flex;
@@ -162,141 +171,121 @@
     }
 
     .chip {
-      min-height: 34px;
-      padding: 0 10px;
-      color: #202020;
-      background: #f3f3f3;
-      border-color: #d1d1d1;
-      box-shadow: none;
-      font-size: 13px;
-      font-weight: 500;
+      min-height: 32px;
+      padding: 4px 12px;
+      color: var(--pewter);
+      background: var(--white);
+      border: 1px solid #D0D1D2;
+      font-size: 14px;
     }
 
     .result {
       display: grid;
       gap: 14px;
-      padding-top: 20px;
+      padding-top: 22px;
       border-top: 1px solid var(--line);
     }
 
     .status {
-      min-height: 28px;
-      color: #333;
+      min-height: 42px;
+      color: var(--graphite);
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.43;
     }
 
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 9px;
+      gap: 8px;
     }
 
     .metric {
       min-width: 0;
-      padding: 11px;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      background: #fff;
+      padding: 12px 0;
+      background: var(--white);
     }
 
     .metric b {
       display: block;
-      color: var(--blue-dark);
-      font-size: 19px;
-      line-height: 1.15;
+      color: var(--ink);
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.18;
     }
 
     .metric span {
       display: block;
       margin-top: 4px;
-      color: var(--muted);
+      color: var(--pewter);
       font-size: 12px;
       line-height: 1.25;
     }
 
     .note {
       margin: 0;
-      color: var(--muted);
+      color: var(--pewter);
       font-size: 13px;
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
     .map-area {
       position: relative;
       min-width: 0;
       min-height: 100%;
+      background: var(--ash);
     }
 
     #map {
       width: 100%;
       height: 100%;
-      background: #f4f4f4;
     }
 
     .map-badge {
       position: absolute;
-      z-index: 500;
+      z-index: 3;
       left: 18px;
       bottom: 18px;
-      max-width: min(570px, calc(100% - 36px));
+      max-width: min(560px, calc(100% - 36px));
       padding: 10px 12px;
-      border: 1px solid rgba(0, 0, 0, .16);
       border-radius: 4px;
-      color: #333;
-      background: rgba(255, 255, 255, .94);
+      color: var(--graphite);
+      background: rgba(255, 255, 255, .86);
+      backdrop-filter: blur(10px);
       font-size: 13px;
       line-height: 1.45;
-      backdrop-filter: blur(8px);
     }
 
-    .pin-icon {
-      width: 32px;
-      height: 32px;
-      border: 3px solid #fff;
+    .pin {
+      width: 30px;
+      height: 30px;
+      border: 3px solid var(--white);
       border-radius: 50% 50% 50% 0;
       background: var(--red);
       transform: rotate(-45deg);
-      box-shadow: none;
     }
 
-    .pin-icon::after {
+    .pin::after {
       content: "";
       position: absolute;
-      width: 10px;
-      height: 10px;
+      width: 9px;
+      height: 9px;
       left: 8px;
       top: 8px;
-      border-radius: 999px;
-      background: #fff;
+      border-radius: 50%;
+      background: var(--white);
     }
 
-    .overlap-arrow {
+    .arrow-only {
+      width: 34px;
+      height: 34px;
       display: grid;
-      grid-template-columns: 28px auto;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 8px;
-      border: 1px solid rgba(23, 26, 32, .16);
-      border-radius: 4px;
-      color: #171A20;
-      background: rgba(255, 255, 255, .94);
-      font-size: 12px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .overlap-arrow i {
-      display: grid;
-      width: 28px;
-      height: 18px;
       place-items: center;
       color: var(--blue);
-      font-style: normal;
-      font-size: 21px;
+      background: rgba(255, 255, 255, .9);
+      border-radius: 50%;
+      font-size: 28px;
       line-height: 1;
       transform: rotate(var(--angle));
-      transform-origin: center;
     }
 
     @media (max-width: 900px) {
@@ -305,11 +294,7 @@
         grid-template-rows: auto 64vh;
       }
 
-      .panel {
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-        padding: 22px;
-      }
+      .panel { padding: 24px; }
     }
 
     @media (max-width: 520px) {
@@ -324,7 +309,7 @@
     <aside class="panel">
       <section>
         <h1>서초 러너 AI 코스</h1>
-        <p>보행자 도로를 따라 달리면서, 서초구 신호등 데이터를 기준으로 횡단보도와 신호 지점을 최대한 덜 만나는 코스를 추천합니다.</p>
+        <p>카카오 지도 위에서 보행자 통행 가능 경로를 찾고, 서초구 신호등 데이터를 기준으로 지나가는 횡단보도를 최대한 줄입니다.</p>
       </section>
 
       <form id="routeForm">
@@ -360,21 +345,22 @@
         <div class="metric-grid">
           <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
           <div class="metric"><b id="duration">-</b><span>예상 시간</span></div>
-          <div class="metric"><b id="crossings">-</b><span>지나간 횡단보도 수</span></div>
+          <div class="metric"><b id="crossings">-</b><span>지나간 횡단보도</span></div>
         </div>
-        <p class="note">지도에는 전체 엑셀 점을 뿌리지 않습니다. 빨간 점은 이번 추천 코스가 지나간 것으로 계산된 횡단 지점만 표시합니다.</p>
+        <p class="note">빨간 점은 전체 신호등 데이터가 아니라 이번 경로가 실제로 매우 가까이 지난 횡단 지점만 표시합니다.</p>
       </section>
     </aside>
 
     <main class="map-area">
       <div id="map"></div>
-      <div class="map-badge" id="mapBadge">파란 선은 보행자 도로 기반 추천 코스입니다. 빨간 점은 지나간 횡단 지점입니다.</div>
+      <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 겹치는 구간은 텍스트 없이 화살표만 표시합니다.</div>
     </main>
   </div>
 
   <script src="./traffic-lights.js"></script>
   <script>
-    const SEOCHO_CENTER = [37.4837, 127.0324];
+    const KAKAO_READY = typeof kakao !== "undefined" && kakao.maps;
+    const SEOCHO_CENTER = { lat: 37.4837, lng: 127.0324 };
     const RUN_PACE_MIN_PER_KM = 6 + 20 / 60;
     const lightRows = window.SEOCHO_TRAFFIC_LIGHTS || [];
     const landmarks = {
@@ -403,9 +389,12 @@
     const makeRouteBtn = document.querySelector("#makeRoute");
     const rerouteBtn = document.querySelector("#reroute");
 
-    let routeLayer;
-    let markerLayer;
-    let crossingLayer;
+    let map;
+    let geocoder;
+    let places;
+    let overlays = [];
+    let polylines = [];
+    let circles = [];
     let lastStart = null;
     let lastEnd = null;
     let variantCursor = 0;
@@ -442,18 +431,32 @@
       ...tmToLatLng(x, y)
     })).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
-    const map = L.map("map").setView(SEOCHO_CENTER, 13);
-    map.setMaxBounds([[32, 123], [44, 132.5]]);
+    function initMap() {
+      if (!KAKAO_READY) {
+        statusEl.textContent = "카카오 지도 SDK를 불러오지 못했습니다. 카카오 앱 키의 JavaScript 플랫폼 도메인 설정을 확인해 주세요.";
+        return;
+      }
+      map = new kakao.maps.Map(document.querySelector("#map"), {
+        center: new kakao.maps.LatLng(SEOCHO_CENTER.lat, SEOCHO_CENTER.lng),
+        level: 5
+      });
+      geocoder = new kakao.maps.services.Geocoder();
+      places = new kakao.maps.services.Places();
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+    }
 
-    L.tileLayer("https://tiles.osm.kr/hot/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap 기여자</a>'
-    }).addTo(map);
+    function toLatLng(point) {
+      return new kakao.maps.LatLng(point.lat, point.lng);
+    }
 
-    L.control.scale({ imperial: false, metric: true }).addTo(map);
-    crossingLayer = L.layerGroup().addTo(map);
-    routeLayer = L.layerGroup().addTo(map);
-    markerLayer = L.layerGroup().addTo(map);
+    function clearMap() {
+      polylines.forEach((line) => line.setMap(null));
+      overlays.forEach((overlay) => overlay.setMap(null));
+      circles.forEach((circle) => circle.setMap(null));
+      polylines = [];
+      overlays = [];
+      circles = [];
+    }
 
     function parseCoordinate(text) {
       const match = text.trim().match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
@@ -474,12 +477,26 @@
           return { label: name, lat: latLng[0], lng: latLng[1], ...tm };
         }
       }
-      const hit = trafficLights.find((p) => {
-        const haystack = `${p.addr} ${p.name}`.replace(/\s/g, "");
-        return normalized.length >= 2 && haystack.includes(normalized);
-      });
-      if (hit) return { label: hit.name && hit.name !== "-" ? hit.name : hit.addr, ...hit };
       return null;
+    }
+
+    function kakaoPlaceSearch(text) {
+      return new Promise((resolve, reject) => {
+        if (!places) {
+          reject(new Error("카카오 장소 검색을 사용할 수 없습니다."));
+          return;
+        }
+        places.keywordSearch(`서초구 ${text}`, (rows, status) => {
+          if (status === kakao.maps.services.Status.OK && rows.length) {
+            const row = rows[0];
+            const lat = Number(row.y);
+            const lng = Number(row.x);
+            resolve({ label: row.place_name || text, lat, lng, ...latLngToTm(lat, lng) });
+          } else {
+            reject(new Error(`"${text}" 위치를 찾지 못했습니다.`));
+          }
+        });
+      });
     }
 
     async function geocode(text) {
@@ -487,19 +504,7 @@
       if (coord) return coord;
       const local = findLocalPlace(text);
       if (local) return local;
-
-      const url = new URL("https://nominatim.openstreetmap.org/search");
-      url.searchParams.set("format", "jsonv2");
-      url.searchParams.set("limit", "1");
-      url.searchParams.set("countrycodes", "kr");
-      url.searchParams.set("q", `서울 서초구 ${text}`);
-      const response = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
-      if (!response.ok) throw new Error("주소 검색에 실패했습니다.");
-      const rows = await response.json();
-      if (!rows.length) throw new Error(`"${text}" 위치를 찾지 못했습니다. 더 구체적인 장소명이나 위도/경도를 입력해 주세요.`);
-      const lat = Number(rows[0].lat);
-      const lng = Number(rows[0].lon);
-      return { label: rows[0].display_name.split(",")[0] || text, lat, lng, ...latLngToTm(lat, lng) };
+      return kakaoPlaceSearch(text);
     }
 
     function distance(a, b) {
@@ -535,27 +540,18 @@
       const ny = dx / direct;
       const tx = dx / direct;
       const ty = dy / direct;
-      const detour = Math.max(targetMeters - direct, targetMeters * .45);
-      const side = Math.min(Math.max(detour / 2.4, 650), targetMeters / 2.1);
-      const forward = Math.min(Math.max(targetMeters / 5.5, 550), 1700);
+      const detour = Math.max(targetMeters - direct, targetMeters * .44);
+      const side = Math.min(Math.max(detour / 2.8, 520), targetMeters / 2.35);
+      const forward = Math.min(Math.max(targetMeters / 6, 480), 1550);
       const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-      const signs = [1, -1, 1.35, -1.35, .72, -.72];
+      const signs = [1, -1, 1.28, -1.28, .7, -.7];
 
       return signs.map((sign, index) => {
         const spread = side * sign;
-        const push = forward * ((index % 2) ? -.45 : .45);
-        const a = {
-          x: center.x - tx * forward + nx * spread + tx * push,
-          y: center.y - ty * forward + ny * spread + ty * push
-        };
-        const b = {
-          x: center.x + tx * forward + nx * spread * .9 - tx * push,
-          y: center.y + ty * forward + ny * spread * .9 - ty * push
-        };
-        const c = {
-          x: center.x + nx * spread * .35 - tx * forward * .2,
-          y: center.y + ny * spread * .35 - ty * forward * .2
-        };
+        const push = forward * ((index % 2) ? -.34 : .34);
+        const a = { x: center.x - tx * forward + nx * spread + tx * push, y: center.y - ty * forward + ny * spread + ty * push };
+        const b = { x: center.x + tx * forward + nx * spread * .9 - tx * push, y: center.y + ty * forward + ny * spread * .9 - ty * push };
+        const c = { x: center.x + nx * spread * .32 - tx * forward * .16, y: center.y + ny * spread * .32 - ty * forward * .16 };
         return index < 2 ? [start, a, b, end] : [start, a, c, b, end];
       });
     }
@@ -574,10 +570,10 @@
     }
 
     function analyzeCrossings(tmPoints) {
-      const minX = Math.min(...tmPoints.map((p) => p.x)) - 120;
-      const maxX = Math.max(...tmPoints.map((p) => p.x)) + 120;
-      const minY = Math.min(...tmPoints.map((p) => p.y)) - 120;
-      const maxY = Math.max(...tmPoints.map((p) => p.y)) + 120;
+      const minX = Math.min(...tmPoints.map((p) => p.x)) - 110;
+      const maxX = Math.max(...tmPoints.map((p) => p.x)) + 110;
+      const minY = Math.min(...tmPoints.map((p) => p.y)) - 110;
+      const maxY = Math.max(...tmPoints.map((p) => p.y)) + 110;
       const nearby = [];
       let score = 0;
 
@@ -586,26 +582,25 @@
         let nearest = Infinity;
         for (let i = 0; i < tmPoints.length - 1; i += 1) {
           nearest = Math.min(nearest, pointToSegmentDistance(light, tmPoints[i], tmPoints[i + 1]));
-          if (nearest < 24) break;
+          if (nearest < 8) break;
         }
-        if (nearest < 70) {
+        if (nearest < 48) {
           nearby.push({ ...light, nearest });
-          score += (70 - nearest) / 70;
-        } else if (nearest < 140) {
-          score += (140 - nearest) / 280;
+          score += (48 - nearest) / 48;
+        } else if (nearest < 95) {
+          score += (95 - nearest) / 260;
         }
       });
 
       nearby.sort((a, b) => a.nearest - b.nearest);
       const clusters = [];
-      nearby.filter((p) => p.nearest < 28).forEach((point) => {
-        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 45));
+      nearby.filter((p) => p.nearest < 10).forEach((point) => {
+        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 75));
         if (cluster) cluster.push(point);
         else clusters.push([point]);
       });
-      const crossed = clusters.length;
       const passedCrossings = clusters.map((cluster) => cluster[0]);
-      return { nearby, passedCrossings, score, crossed };
+      return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
     async function choosePedestrianRoute(start, end, targetMeters) {
@@ -619,49 +614,26 @@
             ...route,
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
-            close: crossing.nearby.length,
             crossed: crossing.crossed,
-            score: Math.abs(route.meters - targetMeters) * 2.8 + crossing.score * 850 + i * 25
+            score: Math.abs(route.meters - targetMeters) * 3 + crossing.score * 1100 + i * 18
           });
         } catch (error) {
           console.warn(error);
         }
       }
-
       if (routes.length) return routes.sort((a, b) => a.score - b.score)[0];
 
-      const fallbackPoints = buildWaypointSets(start, end, targetMeters)[variantCursor % waypointSets.length];
-      const tmPoints = fallbackPoints;
-      const latLngs = fallbackPoints.map(tmPointToLatLng);
-      const crossing = analyzeCrossings(tmPoints);
+      const fallbackPoints = waypointSets[variantCursor % waypointSets.length];
+      const crossing = analyzeCrossings(fallbackPoints);
       return {
-        latLngs,
-        tmPoints,
-        meters: routeLength(tmPoints),
+        latLngs: fallbackPoints.map(tmPointToLatLng),
+        tmPoints: fallbackPoints,
+        meters: routeLength(fallbackPoints),
         crossings: crossing.nearby,
         passedCrossings: crossing.passedCrossings,
-        close: crossing.nearby.length,
         crossed: crossing.crossed,
         fallback: true
       };
-    }
-
-    function pinIcon() {
-      return L.divIcon({
-        className: "",
-        html: "<div class='pin-icon'></div>",
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
-      });
-    }
-
-    function overlapArrowIcon(label, angle) {
-      return L.divIcon({
-        className: "",
-        html: `<div class="overlap-arrow"><i style="--angle:${angle}deg">→</i><span>${label}</span></div>`,
-        iconSize: [78, 30],
-        iconAnchor: [14, 15]
-      });
     }
 
     function routeAngle(points, index) {
@@ -672,11 +644,11 @@
 
     function detectOverlapMarkers(points) {
       const buckets = new Map();
-      const grid = 22;
+      const grid = 18;
       for (let i = 0; i < points.length - 1; i += 1) {
         const a = points[i];
         const b = points[i + 1];
-        if (distance(a, b) < 12) continue;
+        if (distance(a, b) < 10) continue;
         const aKey = `${Math.round(a.x / grid)},${Math.round(a.y / grid)}`;
         const bKey = `${Math.round(b.x / grid)},${Math.round(b.y / grid)}`;
         const key = [aKey, bKey].sort().join("|");
@@ -687,72 +659,92 @@
       const markers = [];
       buckets.forEach((indices) => {
         if (indices.length < 2) return;
-        const separated = indices.some((index, _, arr) => Math.abs(index - arr[0]) > 8);
-        if (!separated) return;
-        const entryIndex = Math.max(0, indices[0]);
-        const exitIndex = Math.min(points.length - 2, indices[indices.length - 1]);
-        markers.push({ label: "겹침 진입", point: points[entryIndex], angle: routeAngle(points, entryIndex) });
-        markers.push({ label: "겹침 이탈", point: points[exitIndex + 1], angle: routeAngle(points, exitIndex) });
+        if (!indices.some((index) => Math.abs(index - indices[0]) > 10)) return;
+        const entryIndex = indices[0];
+        const exitIndex = indices[indices.length - 1];
+        markers.push({ point: points[entryIndex], angle: routeAngle(points, entryIndex) });
+        markers.push({ point: points[Math.min(points.length - 1, exitIndex + 1)], angle: routeAngle(points, exitIndex) });
       });
-
       return markers.slice(0, 8);
     }
 
-    function drawOverlapArrows(route) {
-      detectOverlapMarkers(route.tmPoints).forEach((marker) => {
-        L.marker(tmPointToLatLng(marker.point), {
-          icon: overlapArrowIcon(marker.label, marker.angle),
-          interactive: false
-        }).addTo(routeLayer);
+    function addPin(point, title) {
+      const overlay = new kakao.maps.CustomOverlay({
+        position: toLatLng(point),
+        content: `<div class="pin" title="${title}"></div>`,
+        yAnchor: 1
       });
+      overlay.setMap(map);
+      overlays.push(overlay);
+    }
+
+    function addArrow(point, angle) {
+      const overlay = new kakao.maps.CustomOverlay({
+        position: toLatLng(point),
+        content: `<div class="arrow-only" style="--angle:${angle}deg">→</div>`,
+        xAnchor: .5,
+        yAnchor: .5
+      });
+      overlay.setMap(map);
+      overlays.push(overlay);
     }
 
     function drawCrossings(crossings) {
-      crossingLayer.clearLayers();
-      crossings.slice(0, 35).forEach((p) => {
-        L.circleMarker([p.lat, p.lng], {
-          radius: 5,
-          color: "rgba(180, 0, 0, .75)",
-          weight: 1,
-          fillColor: "#dc2626",
-          fillOpacity: .65
-        }).bindTooltip(p.name && p.name !== "-" ? p.name : p.addr, { sticky: true }).addTo(crossingLayer);
+      crossings.forEach((p) => {
+        const circle = new kakao.maps.Circle({
+          center: toLatLng(p),
+          radius: 7,
+          strokeWeight: 1,
+          strokeColor: "#D92027",
+          strokeOpacity: .72,
+          fillColor: "#D92027",
+          fillOpacity: .58
+        });
+        circle.setMap(map);
+        circles.push(circle);
       });
     }
 
     function drawRoute(start, end, route, targetKm) {
-      routeLayer.clearLayers();
-      markerLayer.clearLayers();
+      clearMap();
+      const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
+      const whiteLine = new kakao.maps.Polyline({
+        path,
+        strokeWeight: 15,
+        strokeColor: "#FFFFFF",
+        strokeOpacity: .95,
+        strokeStyle: "solid"
+      });
+      const blueLine = new kakao.maps.Polyline({
+        path,
+        strokeWeight: 8,
+        strokeColor: "#3E6AE1",
+        strokeOpacity: .98,
+        strokeStyle: "solid"
+      });
+      whiteLine.setMap(map);
+      blueLine.setMap(map);
+      polylines.push(whiteLine, blueLine);
+
       drawCrossings(route.passedCrossings);
+      detectOverlapMarkers(route.tmPoints).forEach((marker) => addArrow(marker.point, marker.angle));
+      addPin(start, "시작점");
+      addPin(end, "도착점");
 
-      L.polyline(route.latLngs, {
-        color: "#ffffff",
-        weight: 15,
-        opacity: .96,
-        lineCap: "round",
-        lineJoin: "round"
-      }).addTo(routeLayer);
-      const blueLine = L.polyline(route.latLngs, {
-        color: "#3E6AE1",
-        weight: 9,
-        opacity: .98,
-        lineCap: "round",
-        lineJoin: "round"
-      }).addTo(routeLayer);
-      drawOverlapArrows(route);
-
-      L.marker([start.lat, start.lng], { icon: pinIcon() }).bindPopup(`시작점: ${start.label}`).addTo(markerLayer);
-      L.marker([end.lat, end.lng], { icon: pinIcon() }).bindPopup(`도착점: ${end.label}`).addTo(markerLayer);
-      map.fitBounds(blueLine.getBounds().pad(.22));
+      const bounds = new kakao.maps.LatLngBounds();
+      path.forEach((point) => bounds.extend(point));
+      bounds.extend(toLatLng(start));
+      bounds.extend(toLatLng(end));
+      map.setBounds(bounds, 56, 56, 56, 56);
 
       const km = route.meters / 1000;
       distanceEl.textContent = `${km.toFixed(2)} km`;
       durationEl.textContent = `${Math.max(1, Math.round(km * RUN_PACE_MIN_PER_KM))}분`;
       crossingsEl.textContent = `${route.crossed}개`;
       statusEl.textContent = route.fallback
-        ? `보행자 API 연결이 불안정해서 임시 후보선을 표시했습니다. ${targetKm}km에 가까운 경로를 다시 시도해 주세요.`
-        : `${targetKm}km 목표에 맞춰 보행자 인도/보행 가능 도로 위 추천 코스를 만들었습니다. 지나간 횡단보도는 ${route.crossed}개입니다.`;
-      mapBadgeEl.textContent = `빨간 점은 안 지난 곳이 아니라, 이번 코스가 지나간 것으로 계산된 횡단 지점 ${route.crossed}개입니다.`;
+        ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
+        : `${targetKm}km 목표에 맞춰 보행자 통행 가능 경로를 만들었습니다. 지나간 횡단보도는 ${route.crossed}개입니다.`;
+      mapBadgeEl.textContent = `빨간 점 ${route.crossed}개는 이번 코스가 실제로 매우 가까이 지난 횡단 지점입니다. 전체 신호등 점은 숨겼습니다.`;
     }
 
     async function makeRoute(reroll = false) {
@@ -763,12 +755,13 @@
         statusEl.textContent = "시작점과 도착점을 모두 입력해 주세요.";
         return;
       }
+      if (!KAKAO_READY) return;
 
       makeRouteBtn.disabled = true;
       rerouteBtn.disabled = true;
       statusEl.textContent = reroll
-        ? `${targetKm}km에 맞는 다른 보행자 코스를 다시 계산 중입니다.`
-        : `${targetKm}km 목표 거리와 신호 지점을 고려해 보행자 코스를 계산 중입니다.`;
+        ? `${targetKm}km에 맞는 다른 후보를 계산 중입니다.`
+        : `${targetKm}km 목표 거리와 횡단 지점 데이터를 비교하고 있습니다.`;
 
       try {
         if (!reroll || !lastStart || !lastEnd) {
@@ -811,6 +804,7 @@
       });
     });
 
+    initMap();
     startInput.value = "교대역";
     endInput.value = "예술의전당";
   </script>
