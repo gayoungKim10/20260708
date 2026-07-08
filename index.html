@@ -8,16 +8,17 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <style>
     :root {
-      --blue: #3E6AE1;
-      --blue-dark: #2f55b8;
-      --ink: #171A20;
-      --graphite: #393C41;
-      --pewter: #5C5E62;
-      --fog: #8E8E8E;
-      --line: #EEEEEE;
-      --ash: #F4F4F4;
-      --red: #D92027;
-      --white: #FFFFFF;
+      --green: #1ed760;
+      --green-dark: #1db954;
+      --ink: #ffffff;
+      --silver: #b3b3b3;
+      --near-white: #fdfdfd;
+      --bg: #121212;
+      --surface: #181818;
+      --surface-2: #1f1f1f;
+      --surface-3: #252525;
+      --border: #4d4d4d;
+      --red: #f3727f;
     }
 
     * { box-sizing: border-box; }
@@ -28,20 +29,20 @@
       height: 100%;
       margin: 0;
       color: var(--ink);
-      background: var(--white);
+      background: var(--bg);
       font-family: "Pretendard", "Segoe UI", -apple-system, Arial, sans-serif;
     }
 
     .app {
       height: 100%;
       display: grid;
-      grid-template-columns: minmax(340px, 408px) minmax(0, 1fr);
+      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
     }
 
     .panel {
       z-index: 10;
-      padding: 32px;
-      background: var(--white);
+      padding: 28px;
+      background: var(--bg);
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -50,7 +51,7 @@
 
     h1 {
       margin: 0;
-      color: var(--ink);
+      color: var(--near-white);
       font-size: clamp(30px, 4vw, 40px);
       font-weight: 500;
       line-height: 1.2;
@@ -59,7 +60,7 @@
 
     p {
       margin: 8px 0 0;
-      color: var(--graphite);
+      color: var(--silver);
       font-size: 14px;
       font-weight: 400;
       line-height: 1.43;
@@ -73,7 +74,7 @@
     label {
       display: grid;
       gap: 7px;
-      color: var(--ink);
+      color: var(--near-white);
       font-size: 14px;
       font-weight: 500;
       line-height: 1.2;
@@ -82,21 +83,20 @@
     input {
       width: 100%;
       min-height: 42px;
-      border: 1px solid #D0D1D2;
-      border-radius: 4px;
+      border: 0;
+      border-radius: 500px;
       padding: 0 12px;
       color: var(--ink);
-      background: var(--white);
+      background: var(--surface-2);
       font: inherit;
       outline: none;
       transition: border-color .33s, box-shadow .25s;
     }
 
-    input::placeholder { color: var(--fog); }
+    input::placeholder { color: var(--silver); }
 
     input:focus {
-      border-color: var(--blue);
-      box-shadow: inset 0 0 0 1px var(--blue);
+      box-shadow: rgb(124, 124, 124) 0 0 0 1px inset;
     }
 
     .distance-options {
@@ -115,19 +115,18 @@
       display: grid;
       min-height: 40px;
       place-items: center;
-      border: 1px solid #D0D1D2;
-      border-radius: 4px;
-      color: var(--graphite);
-      background: var(--white);
+      border: 0;
+      border-radius: 9999px;
+      color: var(--silver);
+      background: var(--surface-2);
       font-weight: 500;
       cursor: pointer;
       transition: border-color .33s, background-color .33s, color .33s;
     }
 
     .distance-options input:checked + span {
-      border-color: var(--blue);
-      color: var(--white);
-      background: var(--blue);
+      color: #000;
+      background: var(--green);
     }
 
     .button-row {
@@ -138,30 +137,32 @@
 
     button {
       min-height: 40px;
-      border: 3px solid transparent;
-      border-radius: 4px;
+      border: 0;
+      border-radius: 9999px;
       padding: 4px 16px;
-      color: var(--white);
-      background: var(--blue);
+      color: #000;
+      background: var(--green);
       font: inherit;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
       cursor: pointer;
       transition: border-color .33s, background-color .33s, color .33s, box-shadow .25s;
     }
 
-    button:hover { background: var(--blue-dark); }
-    button:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
+    button:hover { background: var(--green-dark); }
+    button:focus-visible { box-shadow: rgb(124,124,124) 0 0 0 1px inset; }
     button:disabled { opacity: .55; cursor: wait; }
 
     button.secondary {
-      color: var(--graphite);
-      background: var(--white);
-      border-color: #D0D1D2;
+      color: var(--ink);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
     }
 
     button.secondary:hover {
-      background: var(--ash);
+      background: var(--surface-3);
     }
 
     .quick {
@@ -173,9 +174,9 @@
     .chip {
       min-height: 32px;
       padding: 4px 12px;
-      color: var(--pewter);
-      background: var(--white);
-      border: 1px solid #D0D1D2;
+      color: var(--silver);
+      background: var(--surface-2);
+      border: 0;
       font-size: 14px;
     }
 
@@ -183,31 +184,34 @@
       display: grid;
       gap: 14px;
       padding-top: 22px;
-      border-top: 1px solid var(--line);
+      border-top: 1px solid rgba(179, 179, 179, .18);
     }
 
     .status {
       min-height: 42px;
-      color: var(--graphite);
+      color: var(--silver);
       font-size: 14px;
       line-height: 1.43;
     }
 
     .metric-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
     .metric {
       min-width: 0;
       padding: 12px 0;
-      background: var(--white);
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: rgba(0,0,0,.3) 0 8px 8px;
     }
 
     .metric b {
       display: block;
-      color: var(--ink);
+      color: var(--near-white);
       font-size: 22px;
       font-weight: 500;
       line-height: 1.18;
@@ -216,14 +220,14 @@
     .metric span {
       display: block;
       margin-top: 4px;
-      color: var(--pewter);
+      color: var(--silver);
       font-size: 12px;
       line-height: 1.25;
     }
 
     .note {
       margin: 0;
-      color: var(--pewter);
+      color: var(--silver);
       font-size: 13px;
       line-height: 1.5;
     }
@@ -232,7 +236,7 @@
       position: relative;
       min-width: 0;
       min-height: 100%;
-      background: var(--ash);
+      background: var(--surface);
     }
 
     #map {
@@ -247,9 +251,10 @@
       bottom: 18px;
       max-width: min(560px, calc(100% - 36px));
       padding: 10px 12px;
-      border-radius: 4px;
-      color: var(--graphite);
-      background: rgba(255, 255, 255, .86);
+      border-radius: 10px;
+      color: var(--ink);
+      background: rgba(24, 24, 24, .9);
+      box-shadow: rgba(0,0,0,.5) 0 8px 24px;
       backdrop-filter: blur(10px);
       font-size: 13px;
       line-height: 1.45;
@@ -258,7 +263,7 @@
     .pin {
       width: 30px;
       height: 30px;
-      border: 3px solid var(--white);
+      border: 3px solid #fff;
       border-radius: 50% 50% 50% 0;
       background: var(--red);
       transform: rotate(-45deg);
@@ -272,7 +277,7 @@
       left: 8px;
       top: 8px;
       border-radius: 50%;
-      background: var(--white);
+      background: #fff;
     }
 
     .arrow-only {
@@ -280,8 +285,8 @@
       height: 34px;
       display: grid;
       place-items: center;
-      color: var(--blue);
-      background: rgba(255, 255, 255, .9);
+      color: #000;
+      background: var(--green);
       border-radius: 50%;
       font-size: 28px;
       line-height: 1;
@@ -302,6 +307,24 @@
       .metric-grid,
       .distance-options { grid-template-columns: 1fr; }
     }
+
+    .map-pick-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .map-pick-row button {
+      min-height: 36px;
+      color: var(--silver);
+      background: var(--surface-2);
+      letter-spacing: .8px;
+    }
+
+    .map-pick-row button.active {
+      color: #000;
+      background: var(--green);
+    }
   </style>
 </head>
 <body>
@@ -321,6 +344,10 @@
           도착점
           <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
         </label>
+        <div class="map-pick-row" aria-label="지도에서 위치 선택">
+          <button id="pickStart" class="secondary" type="button">시작 선택</button>
+          <button id="pickEnd" class="secondary" type="button">도착 선택</button>
+        </div>
         <label>
           목표 거리
           <div class="distance-options">
@@ -344,8 +371,7 @@
         <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 AI 추천코스를 눌러 주세요.</div>
         <div class="metric-grid">
           <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
-          <div class="metric"><b id="duration">-</b><span>예상 시간</span></div>
-          <div class="metric"><b id="crossings">-</b><span>지나간 횡단보도</span></div>
+          <div class="metric"><b id="crossings">-</b><span>신호등 있는 횡단보도</span></div>
         </div>
         <p class="note">빨간 점은 전체 신호등 데이터가 아니라 이번 경로가 실제로 매우 가까이 지난 횡단 지점만 표시합니다.</p>
       </section>
@@ -361,7 +387,6 @@
   <script>
     const KAKAO_READY = typeof kakao !== "undefined" && kakao.maps;
     const SEOCHO_CENTER = { lat: 37.4837, lng: 127.0324 };
-    const RUN_PACE_MIN_PER_KM = 6 + 20 / 60;
     const lightRows = window.SEOCHO_TRAFFIC_LIGHTS || [];
     const landmarks = {
       "교대역": [37.4937, 127.0142],
@@ -381,23 +406,27 @@
 
     const statusEl = document.querySelector("#status");
     const distanceEl = document.querySelector("#distance");
-    const durationEl = document.querySelector("#duration");
     const crossingsEl = document.querySelector("#crossings");
     const mapBadgeEl = document.querySelector("#mapBadge");
     const startInput = document.querySelector("#startInput");
     const endInput = document.querySelector("#endInput");
     const makeRouteBtn = document.querySelector("#makeRoute");
     const rerouteBtn = document.querySelector("#reroute");
+    const pickStartBtn = document.querySelector("#pickStart");
+    const pickEndBtn = document.querySelector("#pickEnd");
 
     let map;
     let geocoder;
     let places;
     let overlays = [];
+    let draftStartOverlay = null;
+    let draftEndOverlay = null;
     let polylines = [];
     let circles = [];
     let lastStart = null;
     let lastEnd = null;
     let variantCursor = 0;
+    let pickMode = null;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -443,6 +472,7 @@
       geocoder = new kakao.maps.services.Geocoder();
       places = new kakao.maps.services.Places();
       map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      kakao.maps.event.addListener(map, "click", handleMapClick);
     }
 
     function toLatLng(point) {
@@ -456,6 +486,53 @@
       polylines = [];
       overlays = [];
       circles = [];
+    }
+
+    function clearDraftPins() {
+      if (draftStartOverlay) draftStartOverlay.setMap(null);
+      if (draftEndOverlay) draftEndOverlay.setMap(null);
+      draftStartOverlay = null;
+      draftEndOverlay = null;
+    }
+
+    function setPickMode(mode) {
+      pickMode = pickMode === mode ? null : mode;
+      pickStartBtn.classList.toggle("active", pickMode === "start");
+      pickEndBtn.classList.toggle("active", pickMode === "end");
+      mapBadgeEl.textContent = pickMode
+        ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
+        : "파란 선은 추천 러닝 코스입니다. 겹치는 구간은 텍스트 없이 화살표만 표시합니다.";
+    }
+
+    function addDraftPin(point, title, mode) {
+      if (mode === "start" && draftStartOverlay) draftStartOverlay.setMap(null);
+      if (mode === "end" && draftEndOverlay) draftEndOverlay.setMap(null);
+      const overlay = new kakao.maps.CustomOverlay({
+        position: toLatLng(point),
+        content: `<div class="pin" title="${title}"></div>`,
+        yAnchor: 1
+      });
+      overlay.setMap(map);
+      if (mode === "start") draftStartOverlay = overlay;
+      if (mode === "end") draftEndOverlay = overlay;
+    }
+
+    function handleMapClick(event) {
+      if (!pickMode) return;
+      const lat = event.latLng.getLat();
+      const lng = event.latLng.getLng();
+      const value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      const point = { lat, lng, ...latLngToTm(lat, lng) };
+      if (pickMode === "start") {
+        startInput.value = value;
+        addDraftPin(point, "시작점", "start");
+      } else {
+        endInput.value = value;
+        addDraftPin(point, "도착점", "end");
+      }
+      lastStart = null;
+      lastEnd = null;
+      setPickMode(null);
     }
 
     function parseCoordinate(text) {
@@ -584,18 +661,18 @@
           nearest = Math.min(nearest, pointToSegmentDistance(light, tmPoints[i], tmPoints[i + 1]));
           if (nearest < 8) break;
         }
-        if (nearest < 48) {
+        if (nearest < 32) {
           nearby.push({ ...light, nearest });
-          score += (48 - nearest) / 48;
-        } else if (nearest < 95) {
-          score += (95 - nearest) / 260;
+          score += (32 - nearest) / 32;
+        } else if (nearest < 70) {
+          score += (70 - nearest) / 280;
         }
       });
 
       nearby.sort((a, b) => a.nearest - b.nearest);
       const clusters = [];
-      nearby.filter((p) => p.nearest < 10).forEach((point) => {
-        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 75));
+      nearby.filter((p) => p.nearest < 6).forEach((point) => {
+        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 100));
         if (cluster) cluster.push(point);
         else clusters.push([point]);
       });
@@ -608,20 +685,23 @@
       const routes = [];
       for (let i = 0; i < waypointSets.length; i += 1) {
         try {
-          const route = await fetchPedestrianRoute(waypointSets[(i + variantCursor) % waypointSets.length]);
+          const route = await fetchPedestrianRoute(waypointSets[i]);
           const crossing = analyzeCrossings(route.tmPoints);
           routes.push({
             ...route,
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
             crossed: crossing.crossed,
-            score: Math.abs(route.meters - targetMeters) * 3 + crossing.score * 1100 + i * 18
+            score: crossing.crossed * 9000 + crossing.score * 1300 + Math.abs(route.meters - targetMeters) * 2.2 + i * 18
           });
         } catch (error) {
           console.warn(error);
         }
       }
-      if (routes.length) return routes.sort((a, b) => a.score - b.score)[0];
+      if (routes.length) {
+        const ranked = routes.sort((a, b) => a.score - b.score);
+        return ranked[variantCursor % ranked.length];
+      }
 
       const fallbackPoints = waypointSets[variantCursor % waypointSets.length];
       const crossing = analyzeCrossings(fallbackPoints);
@@ -707,6 +787,7 @@
 
     function drawRoute(start, end, route, targetKm) {
       clearMap();
+      clearDraftPins();
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
       const whiteLine = new kakao.maps.Polyline({
         path,
@@ -739,12 +820,11 @@
 
       const km = route.meters / 1000;
       distanceEl.textContent = `${km.toFixed(2)} km`;
-      durationEl.textContent = `${Math.max(1, Math.round(km * RUN_PACE_MIN_PER_KM))}분`;
       crossingsEl.textContent = `${route.crossed}개`;
       statusEl.textContent = route.fallback
         ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
-        : `${targetKm}km 목표에 맞춰 보행자 통행 가능 경로를 만들었습니다. 지나간 횡단보도는 ${route.crossed}개입니다.`;
-      mapBadgeEl.textContent = `빨간 점 ${route.crossed}개는 이번 코스가 실제로 매우 가까이 지난 횡단 지점입니다. 전체 신호등 점은 숨겼습니다.`;
+        : `${targetKm}km 목표에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
+      mapBadgeEl.textContent = `빨간 점 ${route.crossed}개는 이번 코스가 실제로 통과한 것으로 보는 신호등 있는 횡단 지점입니다.`;
     }
 
     async function makeRoute(reroll = false) {
@@ -760,8 +840,8 @@
       makeRouteBtn.disabled = true;
       rerouteBtn.disabled = true;
       statusEl.textContent = reroll
-        ? `${targetKm}km에 맞는 다른 후보를 계산 중입니다.`
-        : `${targetKm}km 목표 거리와 횡단 지점 데이터를 비교하고 있습니다.`;
+        ? `${targetKm}km 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
+        : `${targetKm}km 목표 거리와 신호등 있는 횡단 지점을 비교하고 있습니다.`;
 
       try {
         if (!reroll || !lastStart || !lastEnd) {
@@ -789,10 +869,16 @@
 
     rerouteBtn.addEventListener("click", () => makeRoute(true));
 
+    pickStartBtn.addEventListener("click", () => setPickMode("start"));
+    pickEndBtn.addEventListener("click", () => setPickMode("end"));
+
     document.querySelectorAll(".chip").forEach((button) => {
       button.addEventListener("click", () => {
         startInput.value = button.dataset.start;
         endInput.value = button.dataset.end;
+        clearDraftPins();
+        lastStart = null;
+        lastEnd = null;
         makeRoute(false);
       });
     });
