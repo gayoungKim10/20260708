@@ -172,6 +172,8 @@
       letter-spacing: 1.1px;
     }
 
+    .watch-button[hidden] { display: none; }
+
     button {
       min-height: 40px;
       border: 0;
@@ -443,7 +445,7 @@
           <button id="makeRoute" type="submit">RUN!</button>
           <button id="reroute" class="secondary" type="button" aria-label="다시 짜기" title="다시 짜기">↻</button>
         </div>
-        <button id="sendWatch" class="watch-button" type="button">이 코스를 내 watch로 보내기</button>
+        <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
       </form>
 
       <div class="quick">
@@ -618,6 +620,7 @@
         endInput.value = value;
         addDraftPin(point, "도착점", "end");
       }
+      setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
       setPickMode(null);
@@ -865,6 +868,10 @@
       });
     }
 
+    function setWatchButtonVisible(isVisible) {
+      sendWatchBtn.hidden = !isVisible;
+    }
+
     function drawBlueRoute(path, weight = 8) {
       const casing = new kakao.maps.Polyline({
         path,
@@ -935,6 +942,7 @@
         ? `보행자 경로 서버가 불안정해 임시 후보선을 표시했습니다. 다시 짜기를 눌러 재시도해 주세요.`
         : `${formatKmRange(targetRange)} 조건에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
       mapBadgeEl.textContent = `파란 선은 추천 경로입니다. 루프/왕복 구간도 하나의 선으로 표시합니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
+      setWatchButtonVisible(true);
     }
 
     async function makeRoute(reroll = false) {
@@ -943,11 +951,13 @@
       const targetRange = parseTargetRange();
       const useLoop = loopRouteInput.checked || !endText;
       if (!startText || (!useLoop && !endText)) {
+        setWatchButtonVisible(false);
         statusEl.textContent = "시작점을 입력해 주세요. 루프가 아니라면 도착점도 필요합니다.";
         return;
       }
       if (!KAKAO_READY) return;
 
+      setWatchButtonVisible(false);
       makeRouteBtn.disabled = true;
       rerouteBtn.disabled = true;
       statusEl.textContent = reroll
@@ -970,6 +980,7 @@
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         drawRoute(lastStart, lastEnd, route, targetRange);
       } catch (error) {
+        setWatchButtonVisible(false);
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
         if (error.showAlert) alert(error.message);
       } finally {
@@ -999,6 +1010,7 @@
         startInput.value = button.dataset.start;
         endInput.value = button.dataset.end;
         clearDraftPins();
+        setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
         makeRoute(false);
@@ -1007,6 +1019,7 @@
 
     document.querySelectorAll("input[name='targetRange']").forEach((input) => {
       input.addEventListener("change", () => {
+        setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
       });
@@ -1015,13 +1028,17 @@
     function syncLoopDestination() {
       if (!loopRouteInput.checked) return;
       endInput.value = startInput.value;
+      setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
     }
 
     startInput.addEventListener("input", syncLoopDestination);
+    startInput.addEventListener("input", () => setWatchButtonVisible(false));
+    endInput.addEventListener("input", () => setWatchButtonVisible(false));
 
     loopRouteInput.addEventListener("change", () => {
+      setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
       if (loopRouteInput.checked) {
