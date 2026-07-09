@@ -1298,6 +1298,8 @@
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
+      let bestExactRoute = null;
+      let bestFallbackRoute = null;
       while (state.waypointSets.length && state.nextIndex < state.waypointSets.length) {
         const waypoint = state.waypointSets[state.nextIndex];
         const index = state.nextIndex;
@@ -1305,26 +1307,31 @@
 
         try {
           const route = await fetchPedestrianRoute(waypoint);
-          if (!isRouteInsideTargetRange(route, targetRange)) {
-            continue;
-          }
-
           const signature = routeSignature(route);
+          if (state.seenRoutes.has(signature)) continue;
           state.seenRoutes.add(signature);
           const crossing = analyzeCrossings(route.tmPoints);
-          return {
+          const scoredRoute = {
             ...route,
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
             crossed: crossing.crossed,
-            score: scoreRoute(route.meters, targetRange, crossing, index)
+            score: scoreRoute(route.meters, targetRange, crossing, index),
+            fallback: !isRouteInsideTargetRange(route, targetRange)
           };
+          if (!scoredRoute.fallback) {
+            if (!bestExactRoute || scoredRoute.score < bestExactRoute.score) {
+              bestExactRoute = scoredRoute;
+            }
+          } else if (!bestFallbackRoute || scoredRoute.score < bestFallbackRoute.score) {
+            bestFallbackRoute = scoredRoute;
+          }
         } catch (error) {
           console.warn(error);
         }
       }
 
-      return null;
+      return bestExactRoute || bestFallbackRoute || null;
     }
 
     function isRouteInsideTargetRange(route, targetRange) {
@@ -1335,7 +1342,8 @@
     function scoreRoute(meters, targetRange, crossing, index) {
       const center = (targetRange.min + targetRange.max) / 2;
       const error = Math.abs(meters - center);
-      const distancePenalty = error * 1.2;
+      const outside = meters < targetRange.min ? targetRange.min - meters : meters > targetRange.max ? meters - targetRange.max : 0;
+      const distancePenalty = error * 1.2 + outside * 180;
       return distancePenalty + crossing.crossed * 4500 + crossing.score * 850 + index * 18;
     }
 
