@@ -319,6 +319,27 @@
       background: #fff;
     }
 
+    .route-arrow {
+      position: relative;
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+      transform-origin: 50% 50%;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22));
+    }
+
+    .route-arrow::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 2px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 12px solid rgba(255, 255, 255, .88);
+    }
+
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -872,6 +893,55 @@
       sendWatchBtn.hidden = !isVisible;
     }
 
+    function addRouteArrows(path) {
+      if (!path.length) return;
+      const tmPath = path.map((point) => ({
+        lat: point.getLat(),
+        lng: point.getLng(),
+        ...latLngToTm(point.getLat(), point.getLng())
+      }));
+      const segmentLengths = [];
+      let totalLength = 0;
+
+      for (let i = 0; i < tmPath.length - 1; i += 1) {
+        const length = distance(tmPath[i], tmPath[i + 1]);
+        segmentLengths.push(length);
+        totalLength += length;
+      }
+
+      if (totalLength < 120) return;
+
+      const spacing = Math.max(70, Math.min(130, totalLength / 26));
+      for (let target = spacing; target < totalLength - spacing * .45; target += spacing) {
+        let walked = 0;
+        for (let i = 0; i < segmentLengths.length; i += 1) {
+          const segmentLength = segmentLengths[i];
+          if (walked + segmentLength < target || segmentLength < 1) {
+            walked += segmentLength;
+            continue;
+          }
+
+          const from = tmPath[i];
+          const to = tmPath[i + 1];
+          const ratio = (target - walked) / segmentLength;
+          const x = from.x + (to.x - from.x) * ratio;
+          const y = from.y + (to.y - from.y) * ratio;
+          const point = tmToLatLng(x, y);
+          const angle = Math.atan2(to.x - from.x, to.y - from.y) * 180 / Math.PI;
+          const overlay = new kakao.maps.CustomOverlay({
+            position: new kakao.maps.LatLng(point.lat, point.lng),
+            content: `<div class="route-arrow" style="transform: rotate(${angle}deg)"></div>`,
+            xAnchor: .5,
+            yAnchor: .5,
+            zIndex: 4
+          });
+          overlay.setMap(map);
+          overlays.push(overlay);
+          break;
+        }
+      }
+    }
+
     function drawBlueRoute(path, weight = 8) {
       const casing = new kakao.maps.Polyline({
         path,
@@ -890,6 +960,7 @@
       casing.setMap(map);
       line.setMap(map);
       polylines.push(casing, line);
+      addRouteArrows(path);
       return line;
     }
 
