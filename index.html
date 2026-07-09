@@ -1283,27 +1283,34 @@
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      if (!state.waypointSets.length || state.nextIndex >= state.waypointSets.length) {
-        return null;
+      const maxAttempts = 5;
+      let attempts = 0;
+
+      while (state.waypointSets.length && state.nextIndex < state.waypointSets.length && attempts < maxAttempts) {
+        const waypoint = state.waypointSets[state.nextIndex];
+        state.nextIndex += 1;
+        attempts += 1;
+
+        try {
+          const route = await fetchPedestrianRoute(waypoint);
+          if (!isRouteInsideTargetRange(route, targetRange)) continue;
+          const crossing = analyzeCrossings(route.tmPoints);
+          return {
+            ...route,
+            crossings: crossing.nearby,
+            passedCrossings: crossing.passedCrossings,
+            crossed: crossing.crossed,
+            fallback: false
+          };
+        } catch (error) {
+          console.warn(error);
+          const fallbackRoute = createFallbackRouteFromWaypoint(waypoint);
+          if (!isRouteInsideTargetRange(fallbackRoute, targetRange)) continue;
+          return fallbackRoute;
+        }
       }
 
-      const waypoint = state.waypointSets[state.nextIndex];
-      state.nextIndex += 1;
-
-      try {
-        const route = await fetchPedestrianRoute(waypoint);
-        const crossing = analyzeCrossings(route.tmPoints);
-        return {
-          ...route,
-          crossings: crossing.nearby,
-          passedCrossings: crossing.passedCrossings,
-          crossed: crossing.crossed,
-          fallback: !isRouteInsideTargetRange(route, targetRange)
-        };
-      } catch (error) {
-        console.warn(error);
-        return createFallbackRouteFromWaypoint(waypoint);
-      }
+      return null;
     }
 
     function isRouteInsideTargetRange(route, targetRange) {
