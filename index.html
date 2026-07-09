@@ -144,6 +144,10 @@
       transition: border-color .33s, background-color .33s, color .33s;
     }
 
+    .pick-label-short {
+      display: none;
+    }
+
     .distance-options input:checked + span {
       color: #000;
       background: var(--green);
@@ -458,6 +462,43 @@
         max-width: none;
         font-size: 12px;
       }
+
+      .distance-options {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .distance-options label {
+        min-width: 0;
+      }
+
+      .distance-options span {
+        min-height: 36px;
+        padding: 0 4px;
+        font-size: clamp(10px, 2.2vw, 13px);
+        white-space: nowrap;
+      }
+
+      .map-pick-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .map-pick-row button {
+        flex: 1 1 0;
+        min-height: 44px;
+        padding: 0 8px;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .pick-label-full {
+        display: none;
+      }
+
+      .pick-label-short {
+        display: inline;
+      }
     }
 
     .map-pick-row {
@@ -586,8 +627,14 @@
           <div id="endSuggestions" class="place-suggestions"></div>
         </label>
         <div class="map-pick-row" aria-label="지도에서 위치 선택">
-          <button id="pickStart" class="secondary" type="button">지도에서 시작점 선택</button>
-          <button id="pickEnd" class="secondary" type="button">지도에서 도착점 선택</button>
+          <button id="pickStart" class="secondary" type="button">
+            <span class="pick-label-full">지도에서 시작점 선택</span>
+            <span class="pick-label-short">지도에서 시작 선택</span>
+          </button>
+          <button id="pickEnd" class="secondary" type="button">
+            <span class="pick-label-full">지도에서 도착점 선택</span>
+            <span class="pick-label-short">지도에서 도착 선택</span>
+          </button>
         </div>
         <label>
           목표 거리
