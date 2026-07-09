@@ -526,11 +526,15 @@
       }
 
       #distance {
-        font-size: 30px;
+        color: var(--green);
+        font-size: 32px;
       }
 
-      .map-fullscreen-toggle,
-      .map-fullscreen-close {
+      #distance + span {
+        color: var(--green);
+      }
+
+      .map-fullscreen-toggle {
         position: absolute;
         z-index: 8;
         display: grid;
@@ -545,6 +549,10 @@
         box-shadow: rgba(0, 0, 0, .36) 0 6px 14px;
         font-size: 18px;
         line-height: 1;
+      }
+
+      .map-fullscreen-close {
+        display: none;
       }
 
       .map-fullscreen-toggle {
@@ -589,6 +597,14 @@
 
       body.map-fullscreen-open {
         overflow: hidden;
+      }
+
+      #sendWatch {
+        width: calc(100% - 44px);
+        max-width: calc(100% - 44px);
+        margin-inline: 22px;
+        box-sizing: border-box;
+        justify-self: stretch;
       }
 
       .pick-label-full {
