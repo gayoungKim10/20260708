@@ -245,21 +245,6 @@
       background: var(--surface-3);
     }
 
-    .quick {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .chip {
-      min-height: 32px;
-      padding: 4px 12px;
-      color: var(--silver);
-      background: var(--surface-2);
-      border: 0;
-      font-size: 14px;
-    }
-
     .result {
       display: grid;
       gap: 14px;
@@ -381,22 +366,13 @@
       border-bottom: 9px solid rgba(255, 255, 255, .88);
     }
 
-    @media (max-width: 900px) {
-      .app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 64vh;
-      }
-
-      .panel { padding: 24px; }
-    }
-
     @media (max-width: 520px) {
       .button-row,
       .metric-grid,
       .distance-options { grid-template-columns: 1fr; }
     }
 
-    @media (max-width: 700px) {
+    @media (max-width: 768px) {
       html,
       body {
         height: auto;
@@ -412,16 +388,67 @@
       }
 
       .panel {
-        overflow: visible;
-        padding: max(22px, env(safe-area-inset-top)) 22px 20px;
-        gap: 20px;
+        display: contents;
       }
 
+      .panel > section {
+        order: 0;
+        padding: max(22px, env(safe-area-inset-top)) 22px 0;
+      }
+
+      #routeForm {
+        display: contents;
+      }
+
+      #routeForm > .place-field,
+      #routeForm > .map-pick-row,
+      #routeForm > label,
+      #routeForm > .button-row,
+      #routeForm > #sendWatch,
+      .status,
+      .metric-grid,
+      .note {
+        padding-inline: 22px;
+      }
+
+      #routeForm > .place-field:nth-of-type(1) { order: 1; }
+      #routeForm > .place-field:nth-of-type(2) { order: 2; }
+      #routeForm > .map-pick-row { order: 3; }
+      #routeForm > label:nth-of-type(3) { order: 4; }
+      #routeForm > .loop-toggle { order: 5; }
+      .result { display: contents; }
+      .status { order: 6; padding-top: 6px; }
+
       .map-area {
-        flex: 0 0 auto;
+        order: 7;
         width: 100%;
         min-height: 0;
-        height: min(52dvh, 480px);
+        height: clamp(300px, 42vh, 400px);
+        padding: 0 22px 22px;
+      }
+
+      .button-row {
+        order: 8;
+        grid-template-columns: 1fr;
+        padding-inline: 22px;
+      }
+
+      .route-control-stack {
+        gap: 8px;
+      }
+
+      #sendWatch {
+        order: 9;
+        margin-inline: 22px;
+      }
+
+      .metric-grid {
+        order: 10;
+        grid-template-columns: 1fr;
+      }
+
+      .note {
+        order: 11;
       }
 
       .map-badge {
@@ -588,12 +615,6 @@
         </div>
         <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
       </form>
-
-      <div class="quick">
-        <button class="chip" type="button" data-start="교대역" data-end="예술의전당">교대역 → 예술의전당</button>
-        <button class="chip" type="button" data-start="고속터미널역" data-end="반포종합운동장">고속터미널 → 반포</button>
-        <button class="chip" type="button" data-start="양재역" data-end="양재천 카페거리">양재역 → 양재천</button>
-      </div>
 
       <section class="result">
         <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 RUN!을 눌러 주세요.</div>
@@ -1527,21 +1548,6 @@
 
     pickStartBtn.addEventListener("click", () => setPickMode("start"));
     pickEndBtn.addEventListener("click", () => setPickMode("end"));
-
-    document.querySelectorAll(".chip").forEach((button) => {
-      button.addEventListener("click", () => {
-        startInput.value = button.dataset.start;
-        endInput.value = button.dataset.end;
-        selectedStartPlace = null;
-        selectedEndPlace = null;
-        clearDraftPins();
-        setWatchButtonVisible(false);
-        lastStart = null;
-        lastEnd = null;
-        resetRoutesHistory();
-        createAndStoreRoute({ reset: true });
-      });
-    });
 
     document.querySelectorAll("input[name='targetRange']").forEach((input) => {
       input.addEventListener("change", () => {
