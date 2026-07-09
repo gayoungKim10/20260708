@@ -139,7 +139,7 @@
 
     .button-row {
       display: grid;
-      grid-template-columns: 1fr 48px;
+      grid-template-columns: 1fr 48px 48px;
       gap: 10px;
       align-items: center;
     }
@@ -151,7 +151,8 @@
       letter-spacing: 2px;
     }
 
-    #reroute {
+    #reroute,
+    #prevRoute {
       width: 44px;
       min-height: 44px;
       padding: 0;
@@ -160,6 +161,11 @@
       line-height: 1;
       letter-spacing: 0;
       align-self: center;
+    }
+
+    #prevRoute:disabled {
+      opacity: .38;
+      cursor: not-allowed;
     }
 
     .watch-button {
@@ -321,8 +327,8 @@
 
     .route-arrow {
       position: relative;
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       pointer-events: none;
       transform-origin: 50% 50%;
       filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22));
@@ -331,13 +337,13 @@
     .route-arrow::before {
       content: "";
       position: absolute;
-      left: 4px;
+      left: 3px;
       top: 2px;
       width: 0;
       height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-bottom: 12px solid rgba(255, 255, 255, .88);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 9px solid rgba(255, 255, 255, .88);
     }
 
     @media (max-width: 900px) {
@@ -465,6 +471,7 @@
         <div class="button-row">
           <button id="makeRoute" type="submit">RUN!</button>
           <button id="reroute" class="secondary" type="button" aria-label="다시 짜기" title="다시 짜기">↻</button>
+          <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
         </div>
         <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
       </form>
@@ -494,7 +501,7 @@
   <script src="./traffic-lights.js"></script>
   <script>
     const KAKAO_READY = typeof kakao !== "undefined" && kakao.maps;
-    const SEOCHO_CENTER = { lat: 37.4837, lng: 127.0324 };
+    const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
     const lightRows = window.SEOCHO_TRAFFIC_LIGHTS || [];
     const landmarks = {
       "교대역": [37.4937, 127.0142],
@@ -509,7 +516,8 @@
       "사당역": [37.4766, 126.9816],
       "방배역": [37.4814, 126.9976],
       "남부터미널역": [37.4850, 127.0162],
-      "서울고등학교": [37.4864, 127.0086]
+      "서울고등학교": [37.4864, 127.0086],
+      "경복궁": [37.5796, 126.9770]
     };
 
     const statusEl = document.querySelector("#status");
@@ -520,6 +528,7 @@
     const endInput = document.querySelector("#endInput");
     const makeRouteBtn = document.querySelector("#makeRoute");
     const rerouteBtn = document.querySelector("#reroute");
+    const prevRouteBtn = document.querySelector("#prevRoute");
     const pickStartBtn = document.querySelector("#pickStart");
     const pickEndBtn = document.querySelector("#pickEnd");
     const loopRouteInput = document.querySelector("#loopRoute");
@@ -537,6 +546,9 @@
     let lastEnd = null;
     let variantCursor = 0;
     let pickMode = null;
+    let routeHistory = [];
+    let routeHistoryIndex = -1;
+    let routeCandidateCache = null;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -576,8 +588,8 @@
         return;
       }
       map = new kakao.maps.Map(document.querySelector("#map"), {
-        center: new kakao.maps.LatLng(SEOCHO_CENTER.lat, SEOCHO_CENTER.lng),
-        level: 5
+        center: new kakao.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lng),
+        level: 8
       });
       geocoder = new kakao.maps.services.Geocoder();
       places = new kakao.maps.services.Places();
@@ -672,22 +684,36 @@
     function kakaoPlaceSearch(text) {
       return new Promise((resolve, reject) => {
         if (!places) {
-          reject(new Error("카카오 장소 검색을 사용할 수 없습니다."));
+          reject(new Error('Kakao place search is not available.'));
           return;
         }
-        places.keywordSearch(`서초구 ${text}`, (rows, status) => {
-          if (status === kakao.maps.services.Status.OK && rows.length) {
-            const row = rows[0];
-            const lat = Number(row.y);
-            const lng = Number(row.x);
-            resolve({ label: row.place_name || text, lat, lng, ...latLngToTm(lat, lng) });
-          } else {
-            reject(new Error(`"${text}" 위치를 찾지 못했습니다.`));
-          }
-        });
+
+        const queries = [text, `서울 ${text}`, `서초구 ${text}`];
+        let queryIndex = 0;
+
+        const tryNextQuery = () => {
+          const query = queries[queryIndex];
+          places.keywordSearch(query, (rows, status) => {
+            if (status === kakao.maps.services.Status.OK && rows.length) {
+              const row = rows[0];
+              const lat = Number(row.y);
+              const lng = Number(row.x);
+              resolve({ label: row.place_name || text, lat, lng, ...latLngToTm(lat, lng) });
+              return;
+            }
+
+            queryIndex += 1;
+            if (queryIndex < queries.length) {
+              tryNextQuery();
+            } else {
+              reject(new Error(`Cannot find location: ${text}`));
+            }
+          });
+        };
+
+        tryNextQuery();
       });
     }
-
     async function geocode(text) {
       const coord = parseCoordinate(text);
       if (coord) return coord;
@@ -716,6 +742,54 @@
       return { lat, lng, ...latLngToTm(lat, lng) };
     }
 
+    function tmPathDistance(points, startIndex, endIndex) {
+      let meters = 0;
+      for (let i = startIndex; i < endIndex; i += 1) {
+        meters += distance(points[i], points[i + 1]);
+      }
+      return meters;
+    }
+
+    function compactShortBranches(tmPoints) {
+      if (tmPoints.length < 5) return tmPoints;
+      let points = tmPoints.slice();
+      let changed = true;
+
+      while (changed) {
+        changed = false;
+        for (let i = 0; i < points.length - 3; i += 1) {
+          let best = null;
+          for (let j = i + 2; j < Math.min(points.length, i + 80); j += 1) {
+            const walked = tmPathDistance(points, i, j);
+            if (walked > 500) break;
+
+            const chord = distance(points[i], points[j]);
+            const isTinyReturn = chord < 38 && walked > chord * 2.4;
+            const isHook = chord < 95 && walked > 180 && walked > chord * 3.1;
+            if (isTinyReturn || isHook) {
+              best = { j, walked, chord };
+            }
+          }
+
+          if (best && best.j > i + 1) {
+            points.splice(i + 1, best.j - i - 1);
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      return points;
+    }
+
+    function routeFromTmPoints(tmPoints, fallbackMeters) {
+      return {
+        latLngs: tmPoints.map((point) => [point.lat, point.lng]),
+        tmPoints,
+        meters: tmPoints.length > 1 ? routeLength(tmPoints) : fallbackMeters
+      };
+    }
+
     function tmPointToLatLng(point) {
       const p = tmToLatLng(point.x, point.y);
       return [p.lat, p.lng];
@@ -723,27 +797,37 @@
 
     function buildLoopWaypointSets(start, targetMeters) {
       const radius = Math.min(Math.max(targetMeters / (Math.PI * 2) * 1.08, 620), 1900);
-      const patterns = [
+      const basePatterns = [
         [0, 90, 180, 270],
         [45, 135, 225, 315],
-        [20, 110, 205, 300],
-        [-25, 65, 155, 245],
         [0, 72, 144, 216, 288],
         [36, 108, 180, 252, 324],
         [-90, -15, 15, 90],
-        [90, 165, 195, 270]
+        [90, 165, 195, 270],
+        [0, 120, 240],
+        [60, 180, 300]
       ];
-      return patterns.map((angles, index) => {
-        const scale = 1 + (index % 3) * .08;
-        const points = angles.map((deg) => {
-          const rad = deg * Math.PI / 180;
-          return {
-            x: start.x + Math.cos(rad) * radius * scale,
-            y: start.y + Math.sin(rad) * radius * scale
-          };
+      const rotations = [0, 18, 36, 54, 72, 90, 126, 162];
+      const scales = [.72, .86, 1, 1.14, 1.3];
+      const sets = [];
+
+      rotations.forEach((rotation, rotationIndex) => {
+        basePatterns.forEach((pattern, patternIndex) => {
+          const scale = scales[(rotationIndex + patternIndex) % scales.length];
+          const stretch = patternIndex % 2 ? 1.18 : .88;
+          const points = pattern.map((deg, pointIndex) => {
+            const wobble = pointIndex % 2 ? 12 : -8;
+            const rad = (deg + rotation + wobble) * Math.PI / 180;
+            return {
+              x: start.x + Math.cos(rad) * radius * scale * stretch,
+              y: start.y + Math.sin(rad) * radius * scale / stretch
+            };
+          });
+          sets.push([start, ...points, start]);
         });
-        return [start, ...points, start];
       });
+
+      return sets;
     }
 
     function buildWaypointSets(start, end, targetMeters) {
@@ -759,15 +843,19 @@
       const side = Math.min(Math.max(detour / 2.8, 520), targetMeters / 2.35);
       const forward = Math.min(Math.max(targetMeters / 6, 480), 1550);
       const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-      const signs = [1, -1, 1.28, -1.28, .7, -.7];
+      const sideFactors = [1, -1, 1.28, -1.28, .7, -.7, 1.55, -1.55, .42, -.42];
+      const pushFactors = [.34, -.34, .12, -.12, .56, -.56];
 
-      return signs.map((sign, index) => {
+      return sideFactors.flatMap((sign, index) => {
         const spread = side * sign;
-        const push = forward * ((index % 2) ? -.34 : .34);
-        const a = { x: center.x - tx * forward + nx * spread + tx * push, y: center.y - ty * forward + ny * spread + ty * push };
-        const b = { x: center.x + tx * forward + nx * spread * .9 - tx * push, y: center.y + ty * forward + ny * spread * .9 - ty * push };
-        const c = { x: center.x + nx * spread * .32 - tx * forward * .16, y: center.y + ny * spread * .32 - ty * forward * .16 };
-        return index < 2 ? [start, a, b, end] : [start, a, c, b, end];
+        return pushFactors.slice(0, index < 4 ? 4 : 2).map((pushFactor, pushIndex) => {
+          const push = forward * pushFactor;
+          const bend = (pushIndex % 2 ? -.22 : .22) * side;
+          const a = { x: center.x - tx * forward + nx * spread + tx * push, y: center.y - ty * forward + ny * spread + ty * push };
+          const b = { x: center.x + tx * forward + nx * spread * .9 - tx * push, y: center.y + ty * forward + ny * spread * .9 - ty * push };
+          const c = { x: center.x + nx * (spread * .32 + bend) - tx * forward * .16, y: center.y + ny * (spread * .32 + bend) - ty * forward * .16 };
+          return index < 2 ? [start, a, b, end] : [start, a, c, b, end];
+        });
       });
     }
 
@@ -781,7 +869,8 @@
       const route = data.routes[0];
       const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
       const tmPoints = latLngs.map(([lat, lng]) => latLngToRoutePoint(lat, lng));
-      return { latLngs, tmPoints, meters: route.distance };
+      const compactedPoints = compactShortBranches(tmPoints);
+      return routeFromTmPoints(compactedPoints, route.distance);
     }
 
     function analyzeCrossings(tmPoints) {
@@ -818,13 +907,51 @@
       return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
+    function routeSignature(route) {
+      const step = Math.max(1, Math.floor(route.latLngs.length / 8));
+      const points = route.latLngs
+        .filter((_, index) => index % step === 0)
+        .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`)
+        .join("|");
+      return `${Math.round(route.meters / 25)}:${points}`;
+    }
+
+    function routeCandidateKey(start, end, targetRange) {
+      return [
+        start.lat.toFixed(5),
+        start.lng.toFixed(5),
+        end.lat.toFixed(5),
+        end.lng.toFixed(5),
+        targetRange.min,
+        targetRange.max
+      ].join("|");
+    }
+
+    function hasExhaustedRouteCandidates(start, end, targetRange) {
+      const cacheKey = routeCandidateKey(start, end, targetRange);
+      return routeCandidateCache
+        && routeCandidateCache.key === cacheKey
+        && routeCandidateCache.routes.length
+        && variantCursor + 1 >= routeCandidateCache.routes.length;
+    }
+
     async function choosePedestrianRoute(start, end, targetRange) {
+      const cacheKey = routeCandidateKey(start, end, targetRange);
+      if (routeCandidateCache && routeCandidateCache.key === cacheKey && routeCandidateCache.routes.length) {
+        return routeCandidateCache.routes[variantCursor % routeCandidateCache.routes.length];
+      }
+
       const targetMeters = (targetRange.min + targetRange.max) / 2;
       const waypointSets = buildWaypointSets(start, end, targetMeters);
       const routes = [];
+      const seenRoutes = new Set();
+
       for (let i = 0; i < waypointSets.length; i += 1) {
         try {
           const route = await fetchPedestrianRoute(waypointSets[i]);
+          const signature = routeSignature(route);
+          if (seenRoutes.has(signature)) continue;
+          seenRoutes.add(signature);
           const crossing = analyzeCrossings(route.tmPoints);
           routes.push({
             ...route,
@@ -833,26 +960,29 @@
             crossed: crossing.crossed,
             score: scoreRoute(route.meters, targetRange, crossing, i)
           });
+          if (routes.length >= 36) break;
         } catch (error) {
           console.warn(error);
         }
       }
+
       if (routes.length) {
         const withinRange = routes.filter((route) => route.meters >= targetRange.min && route.meters <= targetRange.max);
-        if (!withinRange.length) {
-          throw new Error(`${formatKmRange(targetRange)} 사이의 보행자 코스를 찾지 못했습니다. 시작점/도착점을 다시 선택해 주세요.`);
-        }
-        const ranked = withinRange.sort((a, b) => a.score - b.score);
+        const relaxedRange = routes.filter((route) => route.meters >= targetRange.min * .82 && route.meters <= targetRange.max * 1.18);
+        const candidates = withinRange.length ? withinRange : relaxedRange.length ? relaxedRange : routes;
+        const ranked = candidates.sort((a, b) => a.score - b.score);
+        routeCandidateCache = { key: cacheKey, routes: ranked };
         return ranked[variantCursor % ranked.length];
+      }
+
+      if (!waypointSets.length) {
+        throw new Error('No route candidates were generated.');
       }
 
       const fallbackPoints = waypointSets[variantCursor % waypointSets.length];
       const crossing = analyzeCrossings(fallbackPoints);
       const fallbackMeters = routeLength(fallbackPoints);
-      if (fallbackMeters < targetRange.min || fallbackMeters > targetRange.max) {
-        throw new Error(`${formatKmRange(targetRange)} 사이의 코스를 찾지 못했습니다. 다시 선택해 주세요.`);
-      }
-      return {
+      const fallbackRoute = {
         latLngs: fallbackPoints.map(tmPointToLatLng),
         tmPoints: fallbackPoints,
         meters: fallbackMeters,
@@ -861,8 +991,9 @@
         crossed: crossing.crossed,
         fallback: true
       };
+      routeCandidateCache = { key: cacheKey, routes: [fallbackRoute] };
+      return fallbackRoute;
     }
-
     function scoreRoute(meters, targetRange, crossing, index) {
       const center = (targetRange.min + targetRange.max) / 2;
       const error = Math.abs(meters - center);
@@ -1016,6 +1147,33 @@
       setWatchButtonVisible(true);
     }
 
+    function updatePrevRouteButton() {
+      prevRouteBtn.disabled = routeHistoryIndex <= 0;
+    }
+
+    function resetRouteHistory() {
+      routeHistory = [];
+      routeHistoryIndex = -1;
+      routeCandidateCache = null;
+      updatePrevRouteButton();
+    }
+
+    function rememberRoute(start, end, route, targetRange) {
+      if (routeHistoryIndex < routeHistory.length - 1) {
+        routeHistory = routeHistory.slice(0, routeHistoryIndex + 1);
+      }
+      routeHistory.push({ start, end, route, targetRange });
+      routeHistoryIndex = routeHistory.length - 1;
+      updatePrevRouteButton();
+    }
+
+    function showPreviousRoute() {
+      if (routeHistoryIndex <= 0) return;
+      routeHistoryIndex -= 1;
+      const entry = routeHistory[routeHistoryIndex];
+      drawRoute(entry.start, entry.end, entry.route, entry.targetRange);
+      updatePrevRouteButton();
+    }
     async function makeRoute(reroll = false) {
       const startText = startInput.value.trim();
       const endText = endInput.value.trim();
@@ -1031,6 +1189,7 @@
       setWatchButtonVisible(false);
       makeRouteBtn.disabled = true;
       rerouteBtn.disabled = true;
+      prevRouteBtn.disabled = true;
       statusEl.textContent = reroll
         ? `${formatKmRange(targetRange)} 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
         : `${formatKmRange(targetRange)} 범위 안에서 신호등 있는 횡단 지점을 비교하고 있습니다.`;
@@ -1045,11 +1204,18 @@
             throw error;
           }
           variantCursor = 0;
+          resetRouteHistory();
         } else {
+          if (hasExhaustedRouteCandidates(lastStart, lastEnd, targetRange)) {
+            alert("더 이상 만들 수 있는 새로운 코스가 없습니다.");
+            statusEl.textContent = "현재 조건에서 만들 수 있는 다른 코스를 모두 확인했습니다. 시작점/도착점 또는 목표 거리를 바꾸면 새 후보를 만들 수 있습니다.";
+            return;
+          }
           variantCursor += 1;
         }
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         drawRoute(lastStart, lastEnd, route, targetRange);
+        rememberRoute(lastStart, lastEnd, route, targetRange);
       } catch (error) {
         setWatchButtonVisible(false);
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
@@ -1057,6 +1223,7 @@
       } finally {
         makeRouteBtn.disabled = false;
         rerouteBtn.disabled = false;
+        updatePrevRouteButton();
       }
     }
 
@@ -1072,6 +1239,7 @@
     });
 
     rerouteBtn.addEventListener("click", () => makeRoute(true));
+    prevRouteBtn.addEventListener("click", showPreviousRoute);
 
     pickStartBtn.addEventListener("click", () => setPickMode("start"));
     pickEndBtn.addEventListener("click", () => setPickMode("end"));
@@ -1084,6 +1252,7 @@
         setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
+        resetRouteHistory();
         makeRoute(false);
       });
     });
@@ -1093,6 +1262,7 @@
         setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
+        resetRouteHistory();
       });
     });
 
@@ -1102,16 +1272,24 @@
       setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
+      resetRouteHistory();
     }
 
     startInput.addEventListener("input", syncLoopDestination);
-    startInput.addEventListener("input", () => setWatchButtonVisible(false));
-    endInput.addEventListener("input", () => setWatchButtonVisible(false));
+    startInput.addEventListener("input", () => {
+      setWatchButtonVisible(false);
+      resetRouteHistory();
+    });
+    endInput.addEventListener("input", () => {
+      setWatchButtonVisible(false);
+      resetRouteHistory();
+    });
 
     loopRouteInput.addEventListener("change", () => {
       setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
+      resetRouteHistory();
       if (loopRouteInput.checked) {
         endInput.value = startInput.value;
         mapBadgeEl.textContent = "루프 코스는 도착점에 시작점이 자동으로 들어가고, 출발지로 돌아옵니다.";
