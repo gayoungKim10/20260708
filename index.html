@@ -548,10 +548,7 @@
     let pickMode = null;
     let routeHistory = [];
     let routeHistoryIndex = -1;
-    let routeCandidateCache = null;
-    const ROUTE_BATCH_SIZE = 8;
-    const INITIAL_ROUTE_TARGET = 6;
-    const MAX_ROUTE_CANDIDATES = 28;
+    let routeCandidateState = null;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -930,28 +927,53 @@
       ].join("|");
     }
 
-    function hasExhaustedRouteCandidates(start, end, targetRange) {
+    function ensureRouteCandidateState(start, end, targetRange) {
       const cacheKey = routeCandidateKey(start, end, targetRange);
-      return routeCandidateCache
-        && routeCandidateCache.key === cacheKey
-        && routeCandidateCache.routes.length
-        && routeCandidateCache.exhausted
-        && variantCursor + 1 >= routeCandidateCache.routes.length;
+      if (!routeCandidateState || routeCandidateState.key !== cacheKey) {
+        const targetMeters = (targetRange.min + targetRange.max) / 2;
+        routeCandidateState = {
+          key: cacheKey,
+          waypointSets: buildWaypointSets(start, end, targetMeters),
+          nextIndex: 0,
+          seenRoutes: new Set()
+        };
+      }
+      return routeCandidateState;
     }
 
-    function rankRouteCandidates(routes, targetRange) {
-      const withinRange = routes.filter((route) => route.meters >= targetRange.min && route.meters <= targetRange.max);
-      const relaxedRange = routes.filter((route) => route.meters >= targetRange.min * .82 && route.meters <= targetRange.max * 1.18);
-      const candidates = withinRange.length ? withinRange : relaxedRange.length ? relaxedRange : routes;
-      return candidates.slice().sort((a, b) => a.score - b.score);
+    function hasExhaustedRouteCandidates(start, end, targetRange) {
+      const state = ensureRouteCandidateState(start, end, targetRange);
+      return state.nextIndex >= state.waypointSets.length;
     }
 
-    async function fetchRouteCandidate(cache, waypoint, targetRange, index) {
+    function createFallbackRouteFromWaypoint(waypoint) {
+      const crossing = analyzeCrossings(waypoint);
+      const fallbackMeters = routeLength(waypoint);
+      return {
+        latLngs: waypoint.map(tmPointToLatLng),
+        tmPoints: waypoint,
+        meters: fallbackMeters,
+        crossings: crossing.nearby,
+        passedCrossings: crossing.passedCrossings,
+        crossed: crossing.crossed,
+        fallback: true
+      };
+    }
+
+    async function choosePedestrianRoute(start, end, targetRange) {
+      const state = ensureRouteCandidateState(start, end, targetRange);
+      if (!state.waypointSets.length || state.nextIndex >= state.waypointSets.length) {
+        return null;
+      }
+
+      const waypoint = state.waypointSets[state.nextIndex];
+      const index = state.nextIndex;
+      state.nextIndex += 1;
+
       try {
         const route = await fetchPedestrianRoute(waypoint);
         const signature = routeSignature(route);
-        if (cache.seenRoutes.has(signature)) return null;
-        cache.seenRoutes.add(signature);
+        state.seenRoutes.add(signature);
         const crossing = analyzeCrossings(route.tmPoints);
         return {
           ...route,
@@ -962,79 +984,10 @@
         };
       } catch (error) {
         console.warn(error);
-        return null;
+        return createFallbackRouteFromWaypoint(waypoint);
       }
     }
 
-    async function fillRouteCandidateCache(cache, targetRange, targetCount) {
-      while (
-        cache.nextIndex < cache.waypointSets.length
-        && cache.allRoutes.length < targetCount
-        && cache.allRoutes.length < MAX_ROUTE_CANDIDATES
-      ) {
-        const startIndex = cache.nextIndex;
-        const batch = cache.waypointSets.slice(startIndex, startIndex + ROUTE_BATCH_SIZE);
-        cache.nextIndex += batch.length;
-        const results = await Promise.all(batch.map((waypoint, offset) => (
-          fetchRouteCandidate(cache, waypoint, targetRange, startIndex + offset)
-        )));
-        cache.allRoutes.push(...results.filter(Boolean));
-        cache.routes = rankRouteCandidates(cache.allRoutes, targetRange);
-      }
-
-      cache.exhausted = cache.nextIndex >= cache.waypointSets.length || cache.allRoutes.length >= MAX_ROUTE_CANDIDATES;
-    }
-
-    function createFallbackRoute(cache) {
-      if (!cache.waypointSets.length) {
-        throw new Error('No route candidates were generated.');
-      }
-
-      const fallbackPoints = cache.waypointSets[variantCursor % cache.waypointSets.length];
-      const crossing = analyzeCrossings(fallbackPoints);
-      const fallbackMeters = routeLength(fallbackPoints);
-      return {
-        latLngs: fallbackPoints.map(tmPointToLatLng),
-        tmPoints: fallbackPoints,
-        meters: fallbackMeters,
-        crossings: crossing.nearby,
-        passedCrossings: crossing.passedCrossings,
-        crossed: crossing.crossed,
-        fallback: true
-      };
-    }
-
-    async function choosePedestrianRoute(start, end, targetRange) {
-      const cacheKey = routeCandidateKey(start, end, targetRange);
-      if (!routeCandidateCache || routeCandidateCache.key !== cacheKey) {
-        const targetMeters = (targetRange.min + targetRange.max) / 2;
-        routeCandidateCache = {
-          key: cacheKey,
-          waypointSets: buildWaypointSets(start, end, targetMeters),
-          nextIndex: 0,
-          allRoutes: [],
-          routes: [],
-          seenRoutes: new Set(),
-          exhausted: false
-        };
-      }
-
-      const desiredCount = variantCursor + 1;
-      const targetCount = Math.max(INITIAL_ROUTE_TARGET, desiredCount);
-      if (routeCandidateCache.routes.length < targetCount && !routeCandidateCache.exhausted) {
-        await fillRouteCandidateCache(routeCandidateCache, targetRange, targetCount);
-      }
-
-      if (routeCandidateCache.routes.length) {
-        if (variantCursor >= routeCandidateCache.routes.length) return null;
-        return routeCandidateCache.routes[variantCursor];
-      }
-
-      const fallbackRoute = createFallbackRoute(routeCandidateCache);
-      routeCandidateCache.routes = [fallbackRoute];
-      routeCandidateCache.exhausted = true;
-      return fallbackRoute;
-    }
     function scoreRoute(meters, targetRange, crossing, index) {
       const center = (targetRange.min + targetRange.max) / 2;
       const error = Math.abs(meters - center);
@@ -1195,7 +1148,7 @@
     function resetRouteHistory() {
       routeHistory = [];
       routeHistoryIndex = -1;
-      routeCandidateCache = null;
+      routeCandidateState = null;
       updatePrevRouteButton();
     }
 
