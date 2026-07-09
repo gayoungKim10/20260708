@@ -1257,15 +1257,6 @@
       return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
-    function routeSignature(route) {
-      const step = Math.max(1, Math.floor(route.latLngs.length / 8));
-      const points = route.latLngs
-        .filter((_, index) => index % step === 0)
-        .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`)
-        .join("|");
-      return `${Math.round(route.meters / 25)}:${points}`;
-    }
-
     function routeCandidateKey(start, end, targetRange) {
       return [
         start.lat.toFixed(5),
@@ -1284,67 +1275,40 @@
         routeCandidateState = {
           key: cacheKey,
           waypointSets: buildWaypointSets(start, end, targetMeters),
-          nextIndex: 0,
-          seenRoutes: new Set()
+          nextIndex: 0
         };
       }
       return routeCandidateState;
     }
 
-    function hasExhaustedRouteCandidates(start, end, targetRange) {
-      const state = ensureRouteCandidateState(start, end, targetRange);
-      return state.nextIndex >= state.waypointSets.length;
-    }
-
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      let bestExactRoute = null;
-      let bestFallbackRoute = null;
-      while (state.waypointSets.length && state.nextIndex < state.waypointSets.length) {
-        const waypoint = state.waypointSets[state.nextIndex];
-        const index = state.nextIndex;
-        state.nextIndex += 1;
-
-        try {
-          const route = await fetchPedestrianRoute(waypoint);
-          const signature = routeSignature(route);
-          if (state.seenRoutes.has(signature)) continue;
-          state.seenRoutes.add(signature);
-          const crossing = analyzeCrossings(route.tmPoints);
-          const scoredRoute = {
-            ...route,
-            crossings: crossing.nearby,
-            passedCrossings: crossing.passedCrossings,
-            crossed: crossing.crossed,
-            score: scoreRoute(route.meters, targetRange, crossing, index),
-            fallback: !isRouteInsideTargetRange(route, targetRange)
-          };
-          if (!scoredRoute.fallback) {
-            if (!bestExactRoute || scoredRoute.score < bestExactRoute.score) {
-              bestExactRoute = scoredRoute;
-            }
-          } else if (!bestFallbackRoute || scoredRoute.score < bestFallbackRoute.score) {
-            bestFallbackRoute = scoredRoute;
-          }
-        } catch (error) {
-          console.warn(error);
-        }
+      if (!state.waypointSets.length || state.nextIndex >= state.waypointSets.length) {
+        return null;
       }
 
-      return bestExactRoute || bestFallbackRoute || null;
+      const waypoint = state.waypointSets[state.nextIndex];
+      state.nextIndex += 1;
+
+      try {
+        const route = await fetchPedestrianRoute(waypoint);
+        const crossing = analyzeCrossings(route.tmPoints);
+        return {
+          ...route,
+          crossings: crossing.nearby,
+          passedCrossings: crossing.passedCrossings,
+          crossed: crossing.crossed,
+          fallback: !isRouteInsideTargetRange(route, targetRange)
+        };
+      } catch (error) {
+        console.warn(error);
+        return createFallbackRouteFromWaypoint(waypoint);
+      }
     }
 
     function isRouteInsideTargetRange(route, targetRange) {
       const isLastBucket = targetRange.max >= 11000;
       return route.meters >= targetRange.min && (isLastBucket ? route.meters <= targetRange.max : route.meters < targetRange.max);
-    }
-
-    function scoreRoute(meters, targetRange, crossing, index) {
-      const center = (targetRange.min + targetRange.max) / 2;
-      const error = Math.abs(meters - center);
-      const outside = meters < targetRange.min ? targetRange.min - meters : meters > targetRange.max ? meters - targetRange.max : 0;
-      const distancePenalty = error * 1.2 + outside * 180;
-      return distancePenalty + crossing.crossed * 4500 + crossing.score * 850 + index * 18;
     }
 
     function parseTargetRange() {
@@ -1568,12 +1532,6 @@
         if (reset || !lastStart || !lastEnd) {
           resetRoutesHistory();
           await ensureRouteEndpoints(targetRange, useLoop, startText, endText);
-        }
-
-        if (hasExhaustedRouteCandidates(lastStart, lastEnd, targetRange)) {
-          alert("더 이상 추천 가능한 경로가 없습니다.");
-          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안의 코스를 현재 조건에서 찾지 못했습니다. 시작점이나 루프 설정을 조금 바꾸거나 다른 거리를 선택해 주세요.`;
-          return;
         }
 
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
