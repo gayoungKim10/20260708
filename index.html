@@ -1283,7 +1283,7 @@
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      const maxAttempts = 4;
+      const maxAttempts = 7;
       let attempts = 0;
 
       while (state.waypointSets.length && state.nextIndex < state.waypointSets.length && attempts < maxAttempts) {
@@ -1314,8 +1314,10 @@
     }
 
     function isRouteInsideRelaxedTargetRange(route, targetRange) {
-      const lowerSlack = Math.min(1000, Math.max(400, targetRange.min * .12));
-      const upperSlack = Math.min(2000, Math.max(600, targetRange.max * .18));
+      const lowerSlack = Math.min(700, Math.max(250, targetRange.min * .08));
+      const upperSlack = targetRange.max >= 9000
+        ? Math.min(2200, Math.max(900, targetRange.max * .16))
+        : Math.min(1200, Math.max(500, targetRange.max * .12));
       return route.meters >= Math.max(0, targetRange.min - lowerSlack) && route.meters <= targetRange.max + upperSlack;
     }
 
