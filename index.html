@@ -139,7 +139,7 @@
 
     .button-row {
       display: grid;
-      grid-template-columns: 1fr 48px 48px;
+      grid-template-columns: minmax(0, 1fr) minmax(132px, .78fr);
       gap: 10px;
       align-items: center;
     }
@@ -151,19 +151,42 @@
       letter-spacing: 2px;
     }
 
-    #reroute,
-    #prevRoute {
-      width: 44px;
+    .route-control-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    #findNew {
+      width: 100%;
       min-height: 44px;
+      color: var(--ink);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .history-nav {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    #prevRoute,
+    #nextRoute {
+      width: 100%;
+      min-height: 40px;
       padding: 0;
-      border-radius: 50%;
+      border-radius: 9999px;
       font-size: 22px;
       line-height: 1;
       letter-spacing: 0;
       align-self: center;
     }
 
-    #prevRoute:disabled {
+    #prevRoute:disabled,
+    #nextRoute:disabled,
+    #findNew:disabled {
       opacity: .38;
       cursor: not-allowed;
     }
@@ -523,8 +546,13 @@
         </label>
         <div class="button-row">
           <button id="makeRoute" type="submit">RUN!</button>
-          <button id="reroute" class="secondary" type="button" aria-label="다시 짜기" title="다시 짜기">↻</button>
-          <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
+          <div class="route-control-stack">
+            <button id="findNew" class="secondary" type="button" aria-label="새 코스 찾기" title="새 코스 찾기">FIND NEW</button>
+            <div class="history-nav" aria-label="저장된 코스 탐색">
+              <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
+              <button id="nextRoute" class="secondary" type="button" aria-label="다음 코스" title="다음 코스" disabled>›</button>
+            </div>
+          </div>
         </div>
         <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
       </form>
@@ -583,8 +611,9 @@
     const startSuggestions = document.querySelector("#startSuggestions");
     const endSuggestions = document.querySelector("#endSuggestions");
     const makeRouteBtn = document.querySelector("#makeRoute");
-    const rerouteBtn = document.querySelector("#reroute");
+    const findNewBtn = document.querySelector("#findNew");
     const prevRouteBtn = document.querySelector("#prevRoute");
+    const nextRouteBtn = document.querySelector("#nextRoute");
     const pickStartBtn = document.querySelector("#pickStart");
     const pickEndBtn = document.querySelector("#pickEnd");
     const loopRouteInput = document.querySelector("#loopRoute");
@@ -600,10 +629,9 @@
     let circles = [];
     let lastStart = null;
     let lastEnd = null;
-    let variantCursor = 0;
     let pickMode = null;
-    let routeHistory = [];
-    let routeHistoryIndex = -1;
+    let routesHistory = [];
+    let currentRouteIndex = -1;
     let routeCandidateState = null;
     let startSuggestTimer = null;
     let endSuggestTimer = null;
@@ -834,7 +862,7 @@
           setWatchButtonVisible(false);
           lastStart = null;
           lastEnd = null;
-          resetRouteHistory();
+          resetRoutesHistory();
           map.panTo(toLatLng(selected));
         });
         container.appendChild(button);
@@ -1340,34 +1368,58 @@
       setWatchButtonVisible(true);
     }
 
-    function updatePrevRouteButton() {
-      prevRouteBtn.disabled = routeHistoryIndex <= 0;
+    function updateRouteNavButtons() {
+      prevRouteBtn.disabled = currentRouteIndex <= 0;
+      nextRouteBtn.disabled = currentRouteIndex < 0 || currentRouteIndex >= routesHistory.length - 1;
     }
 
-    function resetRouteHistory() {
-      routeHistory = [];
-      routeHistoryIndex = -1;
+    function resetRoutesHistory() {
+      routesHistory = [];
+      currentRouteIndex = -1;
       routeCandidateState = null;
-      updatePrevRouteButton();
+      updateRouteNavButtons();
     }
 
-    function rememberRoute(start, end, route, targetRange) {
-      if (routeHistoryIndex < routeHistory.length - 1) {
-        routeHistory = routeHistory.slice(0, routeHistoryIndex + 1);
-      }
-      routeHistory.push({ start, end, route, targetRange });
-      routeHistoryIndex = routeHistory.length - 1;
-      updatePrevRouteButton();
+    function appendRouteToHistory(start, end, route, targetRange) {
+      routesHistory.push({ start, end, route, targetRange });
+      currentRouteIndex = routesHistory.length - 1;
+      updateRouteNavButtons();
+    }
+
+    function showStoredRoute(index) {
+      if (index < 0 || index >= routesHistory.length) return;
+      currentRouteIndex = index;
+      const entry = routesHistory[currentRouteIndex];
+      drawRoute(entry.start, entry.end, entry.route, entry.targetRange);
+      updateRouteNavButtons();
     }
 
     function showPreviousRoute() {
-      if (routeHistoryIndex <= 0) return;
-      routeHistoryIndex -= 1;
-      const entry = routeHistory[routeHistoryIndex];
-      drawRoute(entry.start, entry.end, entry.route, entry.targetRange);
-      updatePrevRouteButton();
+      showStoredRoute(currentRouteIndex - 1);
     }
-    async function makeRoute(reroll = false) {
+
+    function showNextRoute() {
+      showStoredRoute(currentRouteIndex + 1);
+    }
+
+    async function ensureRouteEndpoints(targetRange, useLoop, startText, endText) {
+      lastStart = selectedStartPlace && selectedStartPlace.label === startText
+        ? selectedStartPlace
+        : await geocode(startText);
+      lastEnd = useLoop
+        ? { ...lastStart, label: `${lastStart.label} 루프` }
+        : selectedEndPlace && selectedEndPlace.label === endText
+          ? selectedEndPlace
+          : await geocode(endText);
+
+      if (!useLoop && distance(lastStart, lastEnd) > targetRange.max) {
+        const error = new Error(`시작점과 도착점 사이의 직선거리가 ${formatKmRange(targetRange)}의 최대 거리보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
+        error.showAlert = true;
+        throw error;
+      }
+    }
+
+    async function createAndStoreRoute({ reset = false } = {}) {
       const startText = startInput.value.trim();
       const endText = endInput.value.trim();
       const targetRange = parseTargetRange();
@@ -1381,57 +1433,44 @@
 
       setWatchButtonVisible(false);
       makeRouteBtn.disabled = true;
-      rerouteBtn.disabled = true;
+      findNewBtn.disabled = true;
       prevRouteBtn.disabled = true;
-      statusEl.textContent = reroll
-        ? `${formatKmRange(targetRange)} 조건에서 횡단보도 기준 차선책을 계산 중입니다.`
-        : `${formatKmRange(targetRange)} 범위 안에서 신호등 있는 횡단 지점을 비교하고 있습니다.`;
+      nextRouteBtn.disabled = true;
+      statusEl.textContent = reset
+        ? `${formatKmRange(targetRange)} 범위 안에서 첫 추천 코스를 찾고 있습니다.`
+        : `${formatKmRange(targetRange)} 조건에서 새 추천 코스를 하나 찾고 있습니다.`;
 
       try {
-        if (!reroll || !lastStart || !lastEnd) {
-          lastStart = selectedStartPlace && selectedStartPlace.label === startText
-            ? selectedStartPlace
-            : await geocode(startText);
-          lastEnd = useLoop
-            ? { ...lastStart, label: `${lastStart.label} 루프` }
-            : selectedEndPlace && selectedEndPlace.label === endText
-              ? selectedEndPlace
-              : await geocode(endText);
-          if (!useLoop && distance(lastStart, lastEnd) > targetRange.max) {
-            const error = new Error(`시작점과 도착점 사이의 직선거리가 ${formatKmRange(targetRange)}의 최대 거리보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
-            error.showAlert = true;
-            throw error;
-          }
-          variantCursor = 0;
-          resetRouteHistory();
-        } else {
-          if (hasExhaustedRouteCandidates(lastStart, lastEnd, targetRange)) {
-            alert("더 이상 만들 수 있는 새로운 코스가 없습니다.");
-            statusEl.textContent = "현재 조건에서 만들 수 있는 다른 코스를 모두 확인했습니다. 시작점/도착점 또는 목표 거리를 바꾸면 새 후보를 만들 수 있습니다.";
-            return;
-          }
-          variantCursor += 1;
+        if (reset || !lastStart || !lastEnd) {
+          resetRoutesHistory();
+          await ensureRouteEndpoints(targetRange, useLoop, startText, endText);
         }
-        const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
-        if (!route) {
-          variantCursor = Math.max(0, variantCursor - 1);
-          alert("더 이상 만들 수 있는 새로운 코스가 없습니다.");
-          statusEl.textContent = "현재 조건에서 만들 수 있는 다른 코스를 모두 확인했습니다. 시작점/도착점 또는 목표 거리를 바꾸면 새 후보를 만들 수 있습니다.";
+
+        if (hasExhaustedRouteCandidates(lastStart, lastEnd, targetRange)) {
+          alert("더 이상 추천 가능한 경로가 없습니다.");
+          statusEl.textContent = "현재 조건에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.";
           return;
         }
+
+        const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        if (!route) {
+          alert("더 이상 추천 가능한 경로가 없습니다.");
+          statusEl.textContent = "현재 조건에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.";
+          return;
+        }
+
+        appendRouteToHistory(lastStart, lastEnd, route, targetRange);
         drawRoute(lastStart, lastEnd, route, targetRange);
-        rememberRoute(lastStart, lastEnd, route, targetRange);
       } catch (error) {
         setWatchButtonVisible(false);
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
         if (error.showAlert) alert(error.message);
       } finally {
         makeRouteBtn.disabled = false;
-        rerouteBtn.disabled = false;
-        updatePrevRouteButton();
+        findNewBtn.disabled = false;
+        updateRouteNavButtons();
       }
     }
-
     document.querySelector("#routeForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const targetRange = parseTargetRange();
@@ -1440,11 +1479,12 @@
         target_range: formatKmRange(targetRange),
         loop_route: loopRouteInput.checked ? "yes" : "no"
       });
-      makeRoute(false);
+      createAndStoreRoute({ reset: true });
     });
 
-    rerouteBtn.addEventListener("click", () => makeRoute(true));
+    findNewBtn.addEventListener("click", () => createAndStoreRoute({ reset: false }));
     prevRouteBtn.addEventListener("click", showPreviousRoute);
+    nextRouteBtn.addEventListener("click", showNextRoute);
 
     pickStartBtn.addEventListener("click", () => setPickMode("start"));
     pickEndBtn.addEventListener("click", () => setPickMode("end"));
@@ -1459,8 +1499,8 @@
         setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
-        resetRouteHistory();
-        makeRoute(false);
+        resetRoutesHistory();
+        createAndStoreRoute({ reset: true });
       });
     });
 
@@ -1469,7 +1509,7 @@
         setWatchButtonVisible(false);
         lastStart = null;
         lastEnd = null;
-        resetRouteHistory();
+        resetRoutesHistory();
       });
     });
 
@@ -1480,24 +1520,24 @@
       setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
-      resetRouteHistory();
+      resetRoutesHistory();
     }
 
     startInput.addEventListener("input", syncLoopDestination);
     startInput.addEventListener("input", () => {
       setWatchButtonVisible(false);
-      resetRouteHistory();
+      resetRoutesHistory();
     });
     endInput.addEventListener("input", () => {
       setWatchButtonVisible(false);
-      resetRouteHistory();
+      resetRoutesHistory();
     });
 
     loopRouteInput.addEventListener("change", () => {
       setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
-      resetRouteHistory();
+      resetRoutesHistory();
       if (loopRouteInput.checked) {
         endInput.value = startInput.value;
         selectedEndPlace = selectedStartPlace;
