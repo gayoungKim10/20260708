@@ -565,8 +565,11 @@
         <label>
           목표 거리
           <div class="distance-options">
+            <label><input type="radio" name="targetRange" value="1-3"><span>1-3km</span></label>
+            <label><input type="radio" name="targetRange" value="3-5"><span>3-5km</span></label>
             <label><input type="radio" name="targetRange" value="5-7" checked><span>5-7km</span></label>
-            <label><input type="radio" name="targetRange" value="8-10"><span>8-10km</span></label>
+            <label><input type="radio" name="targetRange" value="7-9"><span>7-9km</span></label>
+            <label><input type="radio" name="targetRange" value="9-11"><span>9-11km</span></label>
           </div>
         </label>
         <label class="loop-toggle">
@@ -1059,7 +1062,7 @@
       return {
         latLngs: tmPoints.map((point) => [point.lat, point.lng]),
         tmPoints,
-        meters: tmPoints.length > 1 ? routeLength(tmPoints) : fallbackMeters
+        meters: fallbackMeters
       };
     }
 
@@ -1218,37 +1221,44 @@
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      if (!state.waypointSets.length || state.nextIndex >= state.waypointSets.length) {
-        return null;
+      while (state.waypointSets.length && state.nextIndex < state.waypointSets.length) {
+        const waypoint = state.waypointSets[state.nextIndex];
+        const index = state.nextIndex;
+        state.nextIndex += 1;
+
+        try {
+          const route = await fetchPedestrianRoute(waypoint);
+          if (!isRouteInsideTargetRange(route, targetRange)) {
+            continue;
+          }
+
+          const signature = routeSignature(route);
+          state.seenRoutes.add(signature);
+          const crossing = analyzeCrossings(route.tmPoints);
+          return {
+            ...route,
+            crossings: crossing.nearby,
+            passedCrossings: crossing.passedCrossings,
+            crossed: crossing.crossed,
+            score: scoreRoute(route.meters, targetRange, crossing, index)
+          };
+        } catch (error) {
+          console.warn(error);
+        }
       }
 
-      const waypoint = state.waypointSets[state.nextIndex];
-      const index = state.nextIndex;
-      state.nextIndex += 1;
+      return null;
+    }
 
-      try {
-        const route = await fetchPedestrianRoute(waypoint);
-        const signature = routeSignature(route);
-        state.seenRoutes.add(signature);
-        const crossing = analyzeCrossings(route.tmPoints);
-        return {
-          ...route,
-          crossings: crossing.nearby,
-          passedCrossings: crossing.passedCrossings,
-          crossed: crossing.crossed,
-          score: scoreRoute(route.meters, targetRange, crossing, index)
-        };
-      } catch (error) {
-        console.warn(error);
-        throw new Error("보행자가 이동할 수 있는 경로를 찾지 못했습니다. 시작점/도착점을 조금 바꾸거나 다시 시도해 주세요.");
-      }
+    function isRouteInsideTargetRange(route, targetRange) {
+      const isLastBucket = targetRange.max >= 11000;
+      return route.meters >= targetRange.min && (isLastBucket ? route.meters <= targetRange.max : route.meters < targetRange.max);
     }
 
     function scoreRoute(meters, targetRange, crossing, index) {
       const center = (targetRange.min + targetRange.max) / 2;
       const error = Math.abs(meters - center);
-      const outside = meters < targetRange.min ? targetRange.min - meters : meters > targetRange.max ? meters - targetRange.max : 0;
-      const distancePenalty = error * 1.2 + outside * 160;
+      const distancePenalty = error * 1.2;
       return distancePenalty + crossing.crossed * 4500 + crossing.score * 850 + index * 18;
     }
 
@@ -1484,7 +1494,7 @@
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         if (!route) {
           alert("더 이상 추천 가능한 경로가 없습니다.");
-          statusEl.textContent = "현재 조건에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.";
+          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.`;
           return;
         }
 
