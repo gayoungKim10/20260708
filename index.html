@@ -434,6 +434,57 @@
       min-height: 18px;
       accent-color: var(--green);
     }
+
+    .place-field {
+      position: relative;
+    }
+
+    .place-suggestions {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      display: none;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      box-shadow: rgba(0,0,0,.45) 0 12px 24px;
+    }
+
+    .place-suggestions.active {
+      display: grid;
+      gap: 4px;
+    }
+
+    .place-suggestion {
+      width: 100%;
+      min-height: 44px;
+      display: grid;
+      gap: 2px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--ink);
+      background: transparent;
+      text-align: left;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+    }
+
+    .place-suggestion:hover {
+      background: var(--surface-3);
+    }
+
+    .place-suggestion small {
+      color: var(--silver);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.3;
+    }
   </style>
 </head>
 <body>
@@ -445,13 +496,15 @@
       </section>
 
       <form id="routeForm">
-        <label>
+        <label class="place-field">
           시작점
           <input id="startInput" placeholder="예: 교대역, 양재역, 37.4937, 127.0142">
+          <div id="startSuggestions" class="place-suggestions"></div>
         </label>
-        <label>
+        <label class="place-field">
           도착점
           <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
+          <div id="endSuggestions" class="place-suggestions"></div>
         </label>
         <div class="map-pick-row" aria-label="지도에서 위치 선택">
           <button id="pickStart" class="secondary" type="button">지도에서 시작점 선택</button>
@@ -527,6 +580,8 @@
     const mapBadgeEl = document.querySelector("#mapBadge");
     const startInput = document.querySelector("#startInput");
     const endInput = document.querySelector("#endInput");
+    const startSuggestions = document.querySelector("#startSuggestions");
+    const endSuggestions = document.querySelector("#endSuggestions");
     const makeRouteBtn = document.querySelector("#makeRoute");
     const rerouteBtn = document.querySelector("#reroute");
     const prevRouteBtn = document.querySelector("#prevRoute");
@@ -550,6 +605,10 @@
     let routeHistory = [];
     let routeHistoryIndex = -1;
     let routeCandidateState = null;
+    let startSuggestTimer = null;
+    let endSuggestTimer = null;
+    let selectedStartPlace = null;
+    let selectedEndPlace = null;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -648,10 +707,12 @@
       const point = { lat, lng, ...latLngToTm(lat, lng) };
       if (pickMode === "start") {
         startInput.value = value;
+        selectedStartPlace = null;
         syncLoopDestination();
         addDraftPin(point, "시작점", "start");
       } else {
         endInput.value = value;
+        selectedEndPlace = null;
         addDraftPin(point, "도착점", "end");
       }
       setWatchButtonVisible(false);
@@ -715,6 +776,99 @@
         tryNextQuery();
       });
     }
+
+    function searchKakaoPlaces(text) {
+      return new Promise((resolve) => {
+        if (!places || text.trim().length < 2) {
+          resolve([]);
+          return;
+        }
+
+        places.keywordSearch(`서울 ${text}`, (rows, status) => {
+          if (status === kakao.maps.services.Status.OK && rows.length) {
+            resolve(rows.slice(0, 6));
+          } else {
+            resolve([]);
+          }
+        });
+      });
+    }
+
+    function hideSuggestions(container) {
+      container.classList.remove("active");
+      container.innerHTML = "";
+    }
+
+    function renderPlaceSuggestions(input, container, rows) {
+      container.innerHTML = "";
+      if (!rows.length) {
+        hideSuggestions(container);
+        return;
+      }
+
+      rows.forEach((row) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "place-suggestion";
+        const name = document.createElement("span");
+        const address = document.createElement("small");
+        name.textContent = row.place_name;
+        address.textContent = row.road_address_name || row.address_name || "";
+        button.append(name, address);
+        button.addEventListener("click", () => {
+          const selected = {
+            label: row.place_name,
+            lat: Number(row.y),
+            lng: Number(row.x),
+            ...latLngToTm(Number(row.y), Number(row.x))
+          };
+          input.value = row.place_name;
+          if (input === startInput) {
+            selectedStartPlace = selected;
+            if (loopRouteInput.checked) selectedEndPlace = selected;
+            syncLoopDestination();
+          } else {
+            selectedEndPlace = selected;
+          }
+          hideSuggestions(container);
+          setWatchButtonVisible(false);
+          lastStart = null;
+          lastEnd = null;
+          resetRouteHistory();
+          map.panTo(toLatLng(selected));
+        });
+        container.appendChild(button);
+      });
+
+      container.classList.add("active");
+    }
+
+    function attachPlaceAutocomplete(input, container, timerName) {
+      input.addEventListener("input", () => {
+        if (timerName === "start") {
+          selectedStartPlace = null;
+          if (loopRouteInput.checked) selectedEndPlace = null;
+        } else {
+          selectedEndPlace = null;
+        }
+        clearTimeout(timerName === "start" ? startSuggestTimer : endSuggestTimer);
+        const run = async () => {
+          const rows = await searchKakaoPlaces(input.value);
+          renderPlaceSuggestions(input, container, rows);
+        };
+
+        if (timerName === "start") {
+          startSuggestTimer = setTimeout(run, 220);
+        } else {
+          endSuggestTimer = setTimeout(run, 220);
+        }
+      });
+
+      input.addEventListener("blur", () => {
+        setTimeout(() => hideSuggestions(container), 160);
+      });
+    }
+
     async function geocode(text) {
       const coord = parseCoordinate(text);
       if (coord) return coord;
@@ -1005,20 +1159,6 @@
       return state.nextIndex >= state.waypointSets.length;
     }
 
-    function createFallbackRouteFromWaypoint(waypoint) {
-      const crossing = analyzeCrossings(waypoint);
-      const fallbackMeters = routeLength(waypoint);
-      return {
-        latLngs: waypoint.map(tmPointToLatLng),
-        tmPoints: waypoint,
-        meters: fallbackMeters,
-        crossings: crossing.nearby,
-        passedCrossings: crossing.passedCrossings,
-        crossed: crossing.crossed,
-        fallback: true
-      };
-    }
-
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
       if (!state.waypointSets.length || state.nextIndex >= state.waypointSets.length) {
@@ -1043,7 +1183,7 @@
         };
       } catch (error) {
         console.warn(error);
-        return createFallbackRouteFromWaypoint(waypoint);
+        throw new Error("보행자가 이동할 수 있는 경로를 찾지 못했습니다. 시작점/도착점을 조금 바꾸거나 다시 시도해 주세요.");
       }
     }
 
@@ -1249,8 +1389,14 @@
 
       try {
         if (!reroll || !lastStart || !lastEnd) {
-          lastStart = await geocode(startText);
-          lastEnd = useLoop ? { ...lastStart, label: `${lastStart.label} 루프` } : await geocode(endText);
+          lastStart = selectedStartPlace && selectedStartPlace.label === startText
+            ? selectedStartPlace
+            : await geocode(startText);
+          lastEnd = useLoop
+            ? { ...lastStart, label: `${lastStart.label} 루프` }
+            : selectedEndPlace && selectedEndPlace.label === endText
+              ? selectedEndPlace
+              : await geocode(endText);
           if (!useLoop && distance(lastStart, lastEnd) > targetRange.max) {
             const error = new Error(`시작점과 도착점 사이의 직선거리가 ${formatKmRange(targetRange)}의 최대 거리보다 깁니다. 목표 거리를 늘리거나 시작/도착점을 다시 선택해 주세요.`);
             error.showAlert = true;
@@ -1307,6 +1453,8 @@
       button.addEventListener("click", () => {
         startInput.value = button.dataset.start;
         endInput.value = button.dataset.end;
+        selectedStartPlace = null;
+        selectedEndPlace = null;
         clearDraftPins();
         setWatchButtonVisible(false);
         lastStart = null;
@@ -1328,6 +1476,7 @@
     function syncLoopDestination() {
       if (!loopRouteInput.checked) return;
       endInput.value = startInput.value;
+      selectedEndPlace = selectedStartPlace;
       setWatchButtonVisible(false);
       lastStart = null;
       lastEnd = null;
@@ -1351,9 +1500,13 @@
       resetRouteHistory();
       if (loopRouteInput.checked) {
         endInput.value = startInput.value;
+        selectedEndPlace = selectedStartPlace;
         mapBadgeEl.textContent = "루프 코스는 도착점에 시작점이 자동으로 들어가고, 출발지로 돌아옵니다.";
       }
     });
+
+    attachPlaceAutocomplete(startInput, startSuggestions, "start");
+    attachPlaceAutocomplete(endInput, endSuggestions, "end");
 
     sendWatchBtn.addEventListener("click", () => {
       trackAnalyticsEvent("watch_send_click", {
