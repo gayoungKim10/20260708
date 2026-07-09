@@ -734,6 +734,66 @@
       return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
     }
 
+    function nearestSegmentInfo(p, points) {
+      let best = { distance: Infinity, index: -1, t: 0, segmentLength: 0 };
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lengthSquared = dx * dx + dy * dy;
+        const t = lengthSquared
+          ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared))
+          : 0;
+        const projected = { x: a.x + dx * t, y: a.y + dy * t };
+        const segmentDistance = Math.hypot(p.x - projected.x, p.y - projected.y);
+        if (segmentDistance < best.distance) {
+          best = {
+            distance: segmentDistance,
+            index: i,
+            t,
+            segmentLength: Math.sqrt(lengthSquared)
+          };
+        }
+        if (best.distance < 3) break;
+      }
+      return best;
+    }
+
+    function routeNearLength(p, points, radius) {
+      let meters = 0;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+        const closeA = distance(p, a) <= radius;
+        const closeB = distance(p, b) <= radius;
+        const closeSegment = pointToSegmentDistance(p, a, b) <= radius;
+        if (closeSegment) {
+          meters += closeA && closeB ? distance(a, b) : Math.min(distance(a, b), radius * 1.8);
+        }
+      }
+      return meters;
+    }
+
+    function crossingConfidence(light, tmPoints, nearest) {
+      if (nearest.distance > 12) return 0;
+      const nearLength = routeNearLength(light, tmPoints, 16);
+      if (nearLength > 72) return 0;
+
+      const before = tmPoints[Math.max(0, nearest.index - 1)];
+      const after = tmPoints[Math.min(tmPoints.length - 1, nearest.index + 2)];
+      const approach = distance(light, before);
+      const departure = distance(light, after);
+      const passesThrough = approach > 18 && departure > 18;
+      const tightHit = nearest.distance <= 4.5 && passesThrough;
+      const likelyCrossing = nearest.distance <= 8 && passesThrough && nearLength <= 48;
+
+      if (tightHit) return 1;
+      if (likelyCrossing) return .72;
+      if (nearest.distance <= 5 && nearLength <= 32) return .45;
+      return 0;
+    }
+
     function routeLength(points) {
       return points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
     }
@@ -883,27 +943,24 @@
 
       trafficLights.forEach((light) => {
         if (light.x < minX || light.x > maxX || light.y < minY || light.y > maxY) return;
-        let nearest = Infinity;
-        for (let i = 0; i < tmPoints.length - 1; i += 1) {
-          nearest = Math.min(nearest, pointToSegmentDistance(light, tmPoints[i], tmPoints[i + 1]));
-          if (nearest < 8) break;
-        }
-        if (nearest < 32) {
-          nearby.push({ ...light, nearest });
-          score += (32 - nearest) / 32;
-        } else if (nearest < 70) {
-          score += (70 - nearest) / 280;
+        const nearest = nearestSegmentInfo(light, tmPoints);
+        const confidence = crossingConfidence(light, tmPoints, nearest);
+        if (confidence > 0) {
+          nearby.push({ ...light, nearest: nearest.distance, crossingConfidence: confidence });
+          score += confidence * Math.max(0, (14 - nearest.distance) / 14);
+        } else if (nearest.distance < 44) {
+          score += (44 - nearest.distance) / 500;
         }
       });
 
       nearby.sort((a, b) => a.nearest - b.nearest);
       const clusters = [];
-      nearby.filter((p) => p.nearest < 6).forEach((point) => {
+      nearby.filter((p) => p.crossingConfidence >= .7).forEach((point) => {
         const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 100));
         if (cluster) cluster.push(point);
         else clusters.push([point]);
       });
-      const passedCrossings = clusters.map((cluster) => cluster[0]);
+      const passedCrossings = clusters.map((cluster) => cluster.sort((a, b) => b.crossingConfidence - a.crossingConfidence || a.nearest - b.nearest)[0]);
       return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
