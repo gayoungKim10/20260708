@@ -1093,7 +1093,10 @@
     }
 
     function buildLoopWaypointSets(start, targetMeters) {
-      const radius = Math.min(Math.max(targetMeters / (Math.PI * 2) * 1.08, 620), 1900);
+      const radius = Math.min(
+        Math.max(targetMeters / (Math.PI * 2) * 1.02, Math.max(160, targetMeters * .11)),
+        1700
+      );
       const basePatterns = [
         [0, 90, 180, 270],
         [45, 135, 225, 315],
@@ -1136,9 +1139,15 @@
       const ny = dx / direct;
       const tx = dx / direct;
       const ty = dy / direct;
-      const detour = Math.max(targetMeters - direct, targetMeters * .44);
-      const side = Math.min(Math.max(detour / 2.8, 520), targetMeters / 2.35);
-      const forward = Math.min(Math.max(targetMeters / 6, 480), 1550);
+      const detour = Math.max(targetMeters - direct, targetMeters * .24);
+      const side = Math.min(
+        Math.max(detour / 3.2, Math.max(180, targetMeters * .14)),
+        targetMeters * .42
+      );
+      const forward = Math.min(
+        Math.max(targetMeters / 7.5, Math.max(140, targetMeters * .1)),
+        targetMeters * .28
+      );
       const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
       const sideFactors = [1, -1, 1.28, -1.28, .7, -.7, 1.55, -1.55, .42, -.42];
       const pushFactors = [.34, -.34, .12, -.12, .56, -.56];
@@ -1508,14 +1517,14 @@
 
         if (hasExhaustedRouteCandidates(lastStart, lastEnd, targetRange)) {
           alert("더 이상 추천 가능한 경로가 없습니다.");
-          statusEl.textContent = "현재 조건에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.";
+          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안의 코스를 현재 조건에서 찾지 못했습니다. 시작점이나 루프 설정을 조금 바꾸거나 다른 거리를 선택해 주세요.`;
           return;
         }
 
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         if (!route) {
           alert("더 이상 추천 가능한 경로가 없습니다.");
-          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안에서 더 이상 추천 가능한 경로가 없습니다. 기존 경로는 화살표로 계속 볼 수 있습니다.`;
+          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안의 코스를 현재 조건에서 찾지 못했습니다. 루프가 필요하면 시작점을 조금 옮기거나 거리를 넓혀 주세요.`;
           return;
         }
 
