@@ -1283,7 +1283,7 @@
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      const maxAttempts = 5;
+      const maxAttempts = 4;
       let attempts = 0;
 
       while (state.waypointSets.length && state.nextIndex < state.waypointSets.length && attempts < maxAttempts) {
@@ -1293,24 +1293,30 @@
 
         try {
           const route = await fetchPedestrianRoute(waypoint);
-          if (!isRouteInsideTargetRange(route, targetRange)) continue;
+          if (!isRouteInsideRelaxedTargetRange(route, targetRange)) continue;
           const crossing = analyzeCrossings(route.tmPoints);
           return {
             ...route,
             crossings: crossing.nearby,
             passedCrossings: crossing.passedCrossings,
             crossed: crossing.crossed,
-            fallback: false
+            fallback: !isRouteInsideTargetRange(route, targetRange)
           };
         } catch (error) {
           console.warn(error);
           const fallbackRoute = createFallbackRouteFromWaypoint(waypoint);
-          if (!isRouteInsideTargetRange(fallbackRoute, targetRange)) continue;
+          if (!isRouteInsideRelaxedTargetRange(fallbackRoute, targetRange)) continue;
           return fallbackRoute;
         }
       }
 
       return null;
+    }
+
+    function isRouteInsideRelaxedTargetRange(route, targetRange) {
+      const lowerSlack = Math.min(1000, Math.max(400, targetRange.min * .12));
+      const upperSlack = Math.min(2000, Math.max(600, targetRange.max * .18));
+      return route.meters >= Math.max(0, targetRange.min - lowerSlack) && route.meters <= targetRange.max + upperSlack;
     }
 
     function isRouteInsideTargetRange(route, targetRange) {
