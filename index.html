@@ -517,6 +517,7 @@
       "방배역": [37.4814, 126.9976],
       "남부터미널역": [37.4850, 127.0162],
       "서울고등학교": [37.4864, 127.0086],
+      "경복궁역": [37.5758, 126.9736],
       "경복궁": [37.5796, 126.9770]
     };
 
@@ -673,7 +674,7 @@
       const normalized = text.trim().replace(/\s/g, "");
       for (const [name, latLng] of Object.entries(landmarks)) {
         const key = name.replace(/\s/g, "");
-        if (key.includes(normalized) || normalized.includes(key)) {
+        if (key === normalized) {
           const tm = latLngToTm(latLng[0], latLng[1]);
           return { label: name, lat: latLng[0], lng: latLng[1], ...tm };
         }
@@ -776,21 +777,22 @@
     }
 
     function crossingConfidence(light, tmPoints, nearest) {
-      if (nearest.distance > 12) return 0;
-      const nearLength = routeNearLength(light, tmPoints, 16);
-      if (nearLength > 72) return 0;
+      if (nearest.distance > 18) return 0;
+      const nearLength = routeNearLength(light, tmPoints, 18);
+      if (nearLength > 96) return 0;
 
       const before = tmPoints[Math.max(0, nearest.index - 1)];
       const after = tmPoints[Math.min(tmPoints.length - 1, nearest.index + 2)];
       const approach = distance(light, before);
       const departure = distance(light, after);
-      const passesThrough = approach > 18 && departure > 18;
-      const tightHit = nearest.distance <= 4.5 && passesThrough;
-      const likelyCrossing = nearest.distance <= 8 && passesThrough && nearLength <= 48;
+      const passesThrough = approach > 14 && departure > 14;
+      const tightHit = nearest.distance <= 6 && passesThrough;
+      const likelyCrossing = nearest.distance <= 12 && passesThrough && nearLength <= 70;
 
       if (tightHit) return 1;
       if (likelyCrossing) return .72;
-      if (nearest.distance <= 5 && nearLength <= 32) return .45;
+      if (nearest.distance <= 10 && nearLength <= 58) return .58;
+      if (nearest.distance <= 15 && passesThrough && nearLength <= 84) return .42;
       return 0;
     }
 
@@ -955,7 +957,7 @@
 
       nearby.sort((a, b) => a.nearest - b.nearest);
       const clusters = [];
-      nearby.filter((p) => p.crossingConfidence >= .7).forEach((point) => {
+      nearby.filter((p) => p.crossingConfidence >= .42).forEach((point) => {
         const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 100));
         if (cluster) cluster.push(point);
         else clusters.push([point]);
