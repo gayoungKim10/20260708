@@ -549,6 +549,9 @@
     let routeHistory = [];
     let routeHistoryIndex = -1;
     let routeCandidateCache = null;
+    const ROUTE_BATCH_SIZE = 8;
+    const INITIAL_ROUTE_TARGET = 6;
+    const MAX_ROUTE_CANDIDATES = 28;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -932,57 +935,65 @@
       return routeCandidateCache
         && routeCandidateCache.key === cacheKey
         && routeCandidateCache.routes.length
+        && routeCandidateCache.exhausted
         && variantCursor + 1 >= routeCandidateCache.routes.length;
     }
 
-    async function choosePedestrianRoute(start, end, targetRange) {
-      const cacheKey = routeCandidateKey(start, end, targetRange);
-      if (routeCandidateCache && routeCandidateCache.key === cacheKey && routeCandidateCache.routes.length) {
-        return routeCandidateCache.routes[variantCursor % routeCandidateCache.routes.length];
+    function rankRouteCandidates(routes, targetRange) {
+      const withinRange = routes.filter((route) => route.meters >= targetRange.min && route.meters <= targetRange.max);
+      const relaxedRange = routes.filter((route) => route.meters >= targetRange.min * .82 && route.meters <= targetRange.max * 1.18);
+      const candidates = withinRange.length ? withinRange : relaxedRange.length ? relaxedRange : routes;
+      return candidates.slice().sort((a, b) => a.score - b.score);
+    }
+
+    async function fetchRouteCandidate(cache, waypoint, targetRange, index) {
+      try {
+        const route = await fetchPedestrianRoute(waypoint);
+        const signature = routeSignature(route);
+        if (cache.seenRoutes.has(signature)) return null;
+        cache.seenRoutes.add(signature);
+        const crossing = analyzeCrossings(route.tmPoints);
+        return {
+          ...route,
+          crossings: crossing.nearby,
+          passedCrossings: crossing.passedCrossings,
+          crossed: crossing.crossed,
+          score: scoreRoute(route.meters, targetRange, crossing, index)
+        };
+      } catch (error) {
+        console.warn(error);
+        return null;
+      }
+    }
+
+    async function fillRouteCandidateCache(cache, targetRange, targetCount) {
+      while (
+        cache.nextIndex < cache.waypointSets.length
+        && cache.allRoutes.length < targetCount
+        && cache.allRoutes.length < MAX_ROUTE_CANDIDATES
+      ) {
+        const startIndex = cache.nextIndex;
+        const batch = cache.waypointSets.slice(startIndex, startIndex + ROUTE_BATCH_SIZE);
+        cache.nextIndex += batch.length;
+        const results = await Promise.all(batch.map((waypoint, offset) => (
+          fetchRouteCandidate(cache, waypoint, targetRange, startIndex + offset)
+        )));
+        cache.allRoutes.push(...results.filter(Boolean));
+        cache.routes = rankRouteCandidates(cache.allRoutes, targetRange);
       }
 
-      const targetMeters = (targetRange.min + targetRange.max) / 2;
-      const waypointSets = buildWaypointSets(start, end, targetMeters);
-      const routes = [];
-      const seenRoutes = new Set();
+      cache.exhausted = cache.nextIndex >= cache.waypointSets.length || cache.allRoutes.length >= MAX_ROUTE_CANDIDATES;
+    }
 
-      for (let i = 0; i < waypointSets.length; i += 1) {
-        try {
-          const route = await fetchPedestrianRoute(waypointSets[i]);
-          const signature = routeSignature(route);
-          if (seenRoutes.has(signature)) continue;
-          seenRoutes.add(signature);
-          const crossing = analyzeCrossings(route.tmPoints);
-          routes.push({
-            ...route,
-            crossings: crossing.nearby,
-            passedCrossings: crossing.passedCrossings,
-            crossed: crossing.crossed,
-            score: scoreRoute(route.meters, targetRange, crossing, i)
-          });
-          if (routes.length >= 36) break;
-        } catch (error) {
-          console.warn(error);
-        }
-      }
-
-      if (routes.length) {
-        const withinRange = routes.filter((route) => route.meters >= targetRange.min && route.meters <= targetRange.max);
-        const relaxedRange = routes.filter((route) => route.meters >= targetRange.min * .82 && route.meters <= targetRange.max * 1.18);
-        const candidates = withinRange.length ? withinRange : relaxedRange.length ? relaxedRange : routes;
-        const ranked = candidates.sort((a, b) => a.score - b.score);
-        routeCandidateCache = { key: cacheKey, routes: ranked };
-        return ranked[variantCursor % ranked.length];
-      }
-
-      if (!waypointSets.length) {
+    function createFallbackRoute(cache) {
+      if (!cache.waypointSets.length) {
         throw new Error('No route candidates were generated.');
       }
 
-      const fallbackPoints = waypointSets[variantCursor % waypointSets.length];
+      const fallbackPoints = cache.waypointSets[variantCursor % cache.waypointSets.length];
       const crossing = analyzeCrossings(fallbackPoints);
       const fallbackMeters = routeLength(fallbackPoints);
-      const fallbackRoute = {
+      return {
         latLngs: fallbackPoints.map(tmPointToLatLng),
         tmPoints: fallbackPoints,
         meters: fallbackMeters,
@@ -991,7 +1002,37 @@
         crossed: crossing.crossed,
         fallback: true
       };
-      routeCandidateCache = { key: cacheKey, routes: [fallbackRoute] };
+    }
+
+    async function choosePedestrianRoute(start, end, targetRange) {
+      const cacheKey = routeCandidateKey(start, end, targetRange);
+      if (!routeCandidateCache || routeCandidateCache.key !== cacheKey) {
+        const targetMeters = (targetRange.min + targetRange.max) / 2;
+        routeCandidateCache = {
+          key: cacheKey,
+          waypointSets: buildWaypointSets(start, end, targetMeters),
+          nextIndex: 0,
+          allRoutes: [],
+          routes: [],
+          seenRoutes: new Set(),
+          exhausted: false
+        };
+      }
+
+      const desiredCount = variantCursor + 1;
+      const targetCount = Math.max(INITIAL_ROUTE_TARGET, desiredCount);
+      if (routeCandidateCache.routes.length < targetCount && !routeCandidateCache.exhausted) {
+        await fillRouteCandidateCache(routeCandidateCache, targetRange, targetCount);
+      }
+
+      if (routeCandidateCache.routes.length) {
+        if (variantCursor >= routeCandidateCache.routes.length) return null;
+        return routeCandidateCache.routes[variantCursor];
+      }
+
+      const fallbackRoute = createFallbackRoute(routeCandidateCache);
+      routeCandidateCache.routes = [fallbackRoute];
+      routeCandidateCache.exhausted = true;
       return fallbackRoute;
     }
     function scoreRoute(meters, targetRange, crossing, index) {
@@ -1214,6 +1255,12 @@
           variantCursor += 1;
         }
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        if (!route) {
+          variantCursor = Math.max(0, variantCursor - 1);
+          alert("더 이상 만들 수 있는 새로운 코스가 없습니다.");
+          statusEl.textContent = "현재 조건에서 만들 수 있는 다른 코스를 모두 확인했습니다. 시작점/도착점 또는 목표 거리를 바꾸면 새 후보를 만들 수 있습니다.";
+          return;
+        }
         drawRoute(lastStart, lastEnd, route, targetRange);
         rememberRoute(lastStart, lastEnd, route, targetRange);
       } catch (error) {
