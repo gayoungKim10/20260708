@@ -920,6 +920,11 @@
     let endSuggestTimer = null;
     let selectedStartPlace = null;
     let selectedEndPlace = null;
+    const ROUTE_CANDIDATE_BATCH_ATTEMPTS = 12;
+    const URBAN_ROUTE_SAMPLE_SPACING_METERS = 90;
+    const URBAN_ROUTE_SIGNAL_RADIUS_METERS = 190;
+    const URBAN_ROUTE_MAX_UNSUPPORTED_RATIO = .42;
+    const URBAN_ROUTE_MAX_UNSUPPORTED_RUN_METERS = 650;
 
     if (typeof proj4 === "function") {
       proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
@@ -1287,6 +1292,88 @@
       return points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
     }
 
+    function sampleRoutePoints(points, spacing = URBAN_ROUTE_SAMPLE_SPACING_METERS) {
+      if (!points.length) return [];
+      const samples = [points[0]];
+      let distanceToNext = spacing;
+
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+        const segmentLength = distance(a, b);
+        if (segmentLength <= 0) continue;
+        let walked = distanceToNext;
+
+        while (walked < segmentLength) {
+          const ratio = walked / segmentLength;
+          samples.push({
+            x: a.x + (b.x - a.x) * ratio,
+            y: a.y + (b.y - a.y) * ratio,
+            lat: a.lat + (b.lat - a.lat) * ratio,
+            lng: a.lng + (b.lng - a.lng) * ratio
+          });
+          walked += spacing;
+        }
+
+        distanceToNext = walked - segmentLength;
+      }
+
+      samples.push(points[points.length - 1]);
+      return samples;
+    }
+
+    function hasNearbyTrafficSignal(point, candidates, radiusMeters) {
+      const radiusSquared = radiusMeters * radiusMeters;
+      return candidates.some((light) => {
+        const dx = light.x - point.x;
+        const dy = light.y - point.y;
+        return dx * dx + dy * dy <= radiusSquared;
+      });
+    }
+
+    function analyzeUrbanRouteQuality(tmPoints) {
+      const routeMeters = routeLength(tmPoints);
+      const samples = sampleRoutePoints(tmPoints);
+      if (!samples.length) {
+        return { penalty: Number.POSITIVE_INFINITY, unsupportedRatio: 1, maxUnsupportedRun: routeMeters, samples: 0 };
+      }
+
+      const radius = URBAN_ROUTE_SIGNAL_RADIUS_METERS;
+      const minX = Math.min(...tmPoints.map((p) => p.x)) - radius;
+      const maxX = Math.max(...tmPoints.map((p) => p.x)) + radius;
+      const minY = Math.min(...tmPoints.map((p) => p.y)) - radius;
+      const maxY = Math.max(...tmPoints.map((p) => p.y)) + radius;
+      const candidateSignals = trafficLights.filter((light) => light.x >= minX && light.x <= maxX && light.y >= minY && light.y <= maxY);
+
+      let unsupportedSamples = 0;
+      let currentUnsupportedRun = 0;
+      let maxUnsupportedRun = 0;
+
+      samples.forEach((sample) => {
+        if (hasNearbyTrafficSignal(sample, candidateSignals, radius)) {
+          currentUnsupportedRun = 0;
+          return;
+        }
+
+        unsupportedSamples += 1;
+        currentUnsupportedRun += URBAN_ROUTE_SAMPLE_SPACING_METERS;
+        maxUnsupportedRun = Math.max(maxUnsupportedRun, currentUnsupportedRun);
+      });
+
+      const unsupportedRatio = unsupportedSamples / samples.length;
+      const hardPenalty = unsupportedRatio > URBAN_ROUTE_MAX_UNSUPPORTED_RATIO || maxUnsupportedRun > URBAN_ROUTE_MAX_UNSUPPORTED_RUN_METERS ? 1000 : 0;
+      const penalty = hardPenalty + unsupportedRatio * 100 + maxUnsupportedRun / 20;
+
+      return {
+        penalty,
+        unsupportedRatio,
+        maxUnsupportedRun,
+        samples: samples.length,
+        nearbySignalCount: candidateSignals.length,
+        routeMeters
+      };
+    }
+
     function latLngToRoutePoint(lat, lng) {
       return { lat, lng, ...latLngToTm(lat, lng) };
     }
@@ -1427,8 +1514,7 @@
       const route = data.routes[0];
       const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
       const tmPoints = latLngs.map(([lat, lng]) => latLngToRoutePoint(lat, lng));
-      const compactedPoints = compactShortBranches(tmPoints);
-      return routeFromTmPoints(compactedPoints, route.distance);
+      return routeFromTmPoints(tmPoints, route.distance);
     }
 
     function analyzeCrossings(tmPoints) {
@@ -1481,45 +1567,138 @@
           key: cacheKey,
           waypointSets: buildWaypointSets(start, end, targetMeters),
           nextIndex: 0,
-          shownRouteSignatures: new Set()
+          shownRouteSignatures: new Set(),
+          candidateSignatures: new Set(),
+          rankedCandidates: [],
+          lastShownCrossed: -1
         };
       }
       return routeCandidateState;
     }
 
+    function routeTargetDelta(route, targetRange) {
+      const targetMeters = (targetRange.min + targetRange.max) / 2;
+      return Math.abs(route.meters - targetMeters);
+    }
+
+    function compareRouteCandidates(a, b, targetRange) {
+      return Number(a.countingFailed) - Number(b.countingFailed)
+        || Number(a.urbanPenalty >= 1000) - Number(b.urbanPenalty >= 1000)
+        || a.crossed - b.crossed
+        || a.urbanPenalty - b.urbanPenalty
+        || a.crossingScore - b.crossingScore
+        || routeTargetDelta(a, targetRange) - routeTargetDelta(b, targetRange)
+        || a.meters - b.meters;
+    }
+
+    function buildRouteCandidate(route) {
+      try {
+        const crossing = analyzeCrossings(route.tmPoints);
+        const urbanQuality = analyzeUrbanRouteQuality(route.tmPoints);
+        return {
+          ...route,
+          crossings: crossing.nearby,
+          passedCrossings: crossing.passedCrossings,
+          crossed: crossing.crossed,
+          crossingScore: crossing.score,
+          urbanPenalty: urbanQuality.penalty,
+          urbanUnsupportedRatio: urbanQuality.unsupportedRatio,
+          urbanMaxUnsupportedRun: urbanQuality.maxUnsupportedRun,
+          countingFailed: false
+        };
+      } catch (error) {
+        console.warn('Crosswalk counting failed; keeping route available.', error);
+        const urbanQuality = analyzeUrbanRouteQuality(route.tmPoints);
+        return {
+          ...route,
+          crossings: [],
+          passedCrossings: [],
+          crossed: 0,
+          crossingScore: Number.POSITIVE_INFINITY,
+          urbanPenalty: urbanQuality.penalty,
+          urbanUnsupportedRatio: urbanQuality.unsupportedRatio,
+          urbanMaxUnsupportedRun: urbanQuality.maxUnsupportedRun,
+          countingFailed: true
+        };
+      }
+    }
+
+    async function collectRouteCandidates(state, targetRange) {
+      const waypoints = [];
+
+      while (
+        state.waypointSets.length
+        && state.nextIndex < state.waypointSets.length
+        && waypoints.length < ROUTE_CANDIDATE_BATCH_ATTEMPTS
+      ) {
+        waypoints.push(state.waypointSets[state.nextIndex]);
+        state.nextIndex += 1;
+      }
+
+      const results = await Promise.allSettled(waypoints.map((waypoint) => fetchPedestrianRoute(waypoint)));
+      let collected = 0;
+
+      results.forEach((result) => {
+        if (result.status !== 'fulfilled') {
+          console.warn(result.reason);
+          return;
+        }
+
+        const candidate = buildRouteCandidate(result.value);
+        if (!isRouteInsideTargetRange(candidate, targetRange)) return;
+
+        const signature = routeSignature(candidate);
+        if (state.candidateSignatures.has(signature)) return;
+
+        state.candidateSignatures.add(signature);
+        state.rankedCandidates.push(candidate);
+        collected += 1;
+      });
+
+      state.rankedCandidates.sort((a, b) => compareRouteCandidates(a, b, targetRange));
+      console.info('[Route candidates] ranked pool', {
+        attempted: waypoints.length,
+        collected,
+        totalRanked: state.rankedCandidates.length,
+        nextIndex: state.nextIndex,
+        remainingWaypoints: Math.max(0, state.waypointSets.length - state.nextIndex),
+        rankedPreview: state.rankedCandidates.slice(0, 8).map((route) => ({
+          distanceMeters: Math.round(route.meters),
+          crossed: route.crossed,
+          crossingScore: Math.round(route.crossingScore * 100) / 100,
+          urbanPenalty: Math.round(route.urbanPenalty * 10) / 10,
+          unsupportedRatio: Math.round(route.urbanUnsupportedRatio * 100) / 100,
+          unsupportedRun: Math.round(route.urbanMaxUnsupportedRun)
+        }))
+      });
+    }
+    function nextRankedRouteCandidate(state) {
+      return state.rankedCandidates.find((candidate) => {
+        const signature = routeSignature(candidate);
+        return !state.shownRouteSignatures.has(signature)
+          && candidate.crossed >= state.lastShownCrossed;
+      }) || null;
+    }
+
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
-      const maxAttempts = 10;
-      let attempts = 0;
 
-      while (state.waypointSets.length && state.nextIndex < state.waypointSets.length && attempts < maxAttempts) {
-        const waypoint = state.waypointSets[state.nextIndex];
-        state.nextIndex += 1;
-        attempts += 1;
-
-        try {
-          const route = await fetchPedestrianRoute(waypoint);
-          const crossing = analyzeCrossings(route.tmPoints);
-          const candidate = {
-            ...route,
-            crossings: crossing.nearby,
-            passedCrossings: crossing.passedCrossings,
-            crossed: crossing.crossed
-          };
-          if (!isRouteInsideTargetRange(candidate, targetRange)) continue;
-          const signature = routeSignature(candidate);
-          if (state.shownRouteSignatures.has(signature)) continue;
-          state.shownRouteSignatures.add(signature);
-          return candidate;
-        } catch (error) {
-          console.warn(error);
-          continue;
+      while (state.nextIndex < state.waypointSets.length || nextRankedRouteCandidate(state)) {
+        let candidate = nextRankedRouteCandidate(state);
+        if (!candidate) {
+          await collectRouteCandidates(state, targetRange);
+          candidate = nextRankedRouteCandidate(state);
         }
+        if (!candidate) break;
+
+        const signature = routeSignature(candidate);
+        state.shownRouteSignatures.add(signature);
+        state.lastShownCrossed = Math.max(state.lastShownCrossed, candidate.crossed);
+        return candidate;
       }
 
       return null;
     }
-
     function isRouteInsideTargetRange(route, targetRange) {
       return route.meters >= targetRange.min && route.meters <= targetRange.max;
     }
