@@ -1657,16 +1657,67 @@
     }
 
     async function fetchPedestrianRoute(points) {
-      const coords = points.map(tmPointToLatLng).map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join(";");
-      const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?overview=full&geometries=geojson&steps=false`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("보행자 경로 API 응답이 없습니다.");
+      if (!points || points.length < 2) {
+        throw new Error("경로를 만들 좌표가 부족합니다.");
+      }
+    
+      const coords = points.map(tmPointToLatLng);
+    
+      const start = coords[0];
+      const end = coords[coords.length - 1];
+    
+      // 카카오 도보 API는 경유지를 최대 5개까지 지원
+      const vias = coords.slice(1, -1).slice(0, 5);
+    
+      const params = new URLSearchParams({
+        start_x: start[1].toFixed(6),
+        start_y: start[0].toFixed(6),
+        end_x: end[1].toFixed(6),
+        end_y: end[0].toFixed(6),
+        route_mode: "SHORTEST"
+      });
+    
+      if (vias.length > 0) {
+        params.set("via_x", vias.map(([lat, lng]) => lng.toFixed(6)).join(","));
+        params.set("via_y", vias.map(([lat, lng]) => lat.toFixed(6)).join(","));
+      }
+    
+      const response = await fetch(`/api/walk?${params.toString()}`);
+    
+      if (!response.ok) {
+        throw new Error("카카오 도보 경로 API 응답이 없습니다.");
+      }
+    
       const data = await response.json();
-      if (!data.routes || !data.routes[0]) throw new Error("보행자 경로를 찾지 못했습니다.");
-      const route = data.routes[0];
-      const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-      const tmPoints = latLngs.map(([lat, lng]) => latLngToRoutePoint(lat, lng));
-      return routeFromTmPoints(tmPoints, route.distance);
+    
+      if (data.status !== "OK" || !data.route) {
+        throw new Error(`카카오에서 도보 경로를 찾지 못했습니다: ${data.status || "UNKNOWN"}`);
+      }
+    
+      const latLngs = [];
+    
+      data.route.legs.forEach((leg) => {
+        leg.steps.forEach((step) => {
+          if (!step.path || !step.path.points) return;
+    
+          step.path.points.forEach(([lng, lat]) => {
+            latLngs.push([lat, lng]);
+          });
+        });
+      });
+    
+      if (latLngs.length < 2) {
+        throw new Error("카카오 도보 경로 좌표가 없습니다.");
+      }
+    
+      const tmPoints = latLngs.map(([lat, lng]) =>
+        latLngToRoutePoint(lat, lng)
+      );
+    
+      return routeFromTmPoints(
+        tmPoints,
+        data.route.properties.totalDistance
+      );
     }
 
     function analyzeCrossings(tmPoints) {
