@@ -951,13 +951,141 @@
       };
     }
 
-    const trafficLights = lightRows.map(([id, addr, name, x, y]) => ({
+    let trafficLights = lightRows.map(([id, addr, name, x, y]) => ({
       id,
       addr,
       name,
       ...tmToLatLng(x, y)
     })).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
+    const GYEONGGI_CROSSWALK_CSV_PATH = './횡단보도현황.csv';
+    let gyeonggiCrosswalkLoadPromise = null;
+
+    function parseCsvLine(line) {
+      const values = [];
+      let value = '';
+      let quoted = false;
+
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (char === '"') {
+          if (quoted && line[i + 1] === '"') {
+            value += '"';
+            i += 1;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (char === ',' && !quoted) {
+          values.push(value);
+          value = '';
+        } else {
+          value += char;
+        }
+      }
+
+      values.push(value);
+      return values;
+    }
+
+    function parseCsv(text) {
+      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim());
+      if (!lines.length) return [];
+      const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+      return lines.slice(1).map((line, index) => {
+        const values = parseCsvLine(line);
+        const row = { __rowNumber: index + 2 };
+        headers.forEach((header, headerIndex) => {
+          row[header] = (values[headerIndex] || '').trim();
+        });
+        return row;
+      });
+    }
+
+    function parseFiniteNumber(value) {
+      if (value === null || value === undefined || value === '') return NaN;
+      const parsed = Number.parseFloat(String(value).trim());
+      return Number.isFinite(parsed) ? parsed : NaN;
+    }
+
+    function isValidWgs84(lat, lng) {
+      return Number.isFinite(lat)
+        && Number.isFinite(lng)
+        && lat >= 33
+        && lat <= 39
+        && lng >= 124
+        && lng <= 132;
+    }
+
+    function normalizeGyeonggiCrosswalk(row) {
+      if ((row['보행자신호등유무'] || '').toUpperCase() !== 'Y') return null;
+
+      const lat = parseFiniteNumber(row['위도']);
+      const lng = parseFiniteNumber(row['경도']);
+      if (!isValidWgs84(lat, lng)) return null;
+
+      const tm = latLngToTm(lat, lng);
+      return {
+        id: `gg-csv-${row['시군구명'] || ''}-${row['횡단보도관리번호'] || row.__rowNumber}`,
+        addr: row['소재지도로명주소'] || row['소재지지번주소'] || [row['시도명'], row['시군구명'], row['도로명']].filter(Boolean).join(' '),
+        name: row['도로명'] || row['횡단보도관리번호'] || '경기도 횡단보도',
+        source: 'gyeonggi-crosswalk-csv',
+        sido: row['시도명'] || '',
+        sigungu: row['시군구명'] || '',
+        manageNo: row['횡단보도관리번호'] || '',
+        signal: row['보행자신호등유무'] || '',
+        crosswalkWidth: parseFiniteNumber(row['횡단보도폭']),
+        rawRowNumber: row.__rowNumber,
+        lat,
+        lng,
+        x: tm.x,
+        y: tm.y
+      };
+    }
+
+    async function loadGyeonggiCrosswalks() {
+      if (gyeonggiCrosswalkLoadPromise) return gyeonggiCrosswalkLoadPromise;
+
+      gyeonggiCrosswalkLoadPromise = fetch(GYEONGGI_CROSSWALK_CSV_PATH)
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`경기 횡단보도 CSV 로드 실패: ${response.status}`);
+          const buffer = await response.arrayBuffer();
+          const decoder = typeof TextDecoder === 'function' ? new TextDecoder('euc-kr') : null;
+          const csvText = decoder ? decoder.decode(buffer) : await response.text();
+          const rows = parseCsv(csvText);
+          const signalRows = rows.filter((row) => (row['보행자신호등유무'] || '').toUpperCase() === 'Y');
+          const normalized = rows.map(normalizeGyeonggiCrosswalk).filter(Boolean);
+          trafficLights = trafficLights.concat(normalized);
+          console.info('[Gyeonggi crosswalk CSV] loaded', {
+            path: GYEONGGI_CROSSWALK_CSV_PATH,
+            mappedColumns: {
+              lat: '위도',
+              lng: '경도',
+              signal: '보행자신호등유무',
+              manageNo: '횡단보도관리번호',
+              sigungu: '시군구명',
+              width: '횡단보도폭'
+            },
+            totalRows: rows.length,
+            signalYRows: signalRows.length,
+            validSignalizedRows: normalized.length,
+            sample: normalized.slice(0, 5).map((point) => ({
+              sigungu: point.sigungu,
+              manageNo: point.manageNo,
+              lat: point.lat,
+              lng: point.lng,
+              signal: point.signal,
+              width: point.crosswalkWidth
+            }))
+          });
+          return normalized;
+        })
+        .catch((error) => {
+          console.warn('[Gyeonggi crosswalk CSV] loading failed; Seoul counting remains available.', error);
+          return [];
+        });
+
+      return gyeonggiCrosswalkLoadPromise;
+    }
     function initMap() {
       if (!KAKAO_READY) {
         statusEl.textContent = "카카오 지도 SDK를 불러오지 못했습니다. 카카오 앱 키의 JavaScript 플랫폼 도메인 설정을 확인해 주세요.";
@@ -1545,6 +1673,18 @@
         else clusters.push([point]);
       });
       const passedCrossings = clusters.map((cluster) => cluster.sort((a, b) => b.crossingConfidence - a.crossingConfidence || a.nearest - b.nearest)[0]);
+      const gyeonggiMatched = passedCrossings.filter((point) => point.source === 'gyeonggi-crosswalk-csv');
+      if (gyeonggiMatched.length) {
+        console.table(gyeonggiMatched.map((point) => ({
+          시군구명: point.sigungu,
+          관리번호: point.manageNo,
+          위도: point.lat,
+          경도: point.lng,
+          보행자신호등유무: point.signal,
+          횡단보도폭: point.crosswalkWidth,
+          경로최소거리m: Math.round(point.nearest * 10) / 10
+        })));
+      }
       return { nearby, passedCrossings, score, crossed: passedCrossings.length };
     }
 
@@ -1944,6 +2084,7 @@
           await ensureRouteEndpoints(targetRange, useLoop, startText, endText);
         }
 
+        await loadGyeonggiCrosswalks();
         const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         if (!route) {
           alert("더 이상 추천 가능한 경로가 없습니다.");
