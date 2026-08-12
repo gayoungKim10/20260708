@@ -1245,18 +1245,42 @@
 
     function searchKakaoPlaces(text) {
       return new Promise((resolve) => {
-        if (!places || text.trim().length < 2) {
+        const keyword = text.trim();
+        if (!places || keyword.length < 2) {
           resolve([]);
           return;
         }
 
-        places.keywordSearch(`서울 ${text}`, (rows, status) => {
-          if (status === kakao.maps.services.Status.OK && rows.length) {
-            resolve(rows.slice(0, 6));
-          } else {
-            resolve([]);
+        const queries = [keyword, `서울 ${keyword}`, `경기 ${keyword}`, `수원 ${keyword}`];
+        const seen = new Set();
+        const results = [];
+        let queryIndex = 0;
+
+        const collectNext = () => {
+          if (queryIndex >= queries.length || results.length >= 10) {
+            resolve(results.slice(0, 10));
+            return;
           }
-        });
+
+          const query = queries[queryIndex];
+          queryIndex += 1;
+          places.keywordSearch(query, (rows, status) => {
+            if (status === kakao.maps.services.Status.OK && rows.length) {
+              rows.forEach((row) => {
+                const key = row.id || `${row.place_name}|${row.x}|${row.y}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  results.push(row);
+                }
+              });
+            } else if (status === kakao.maps.services.Status.ERROR) {
+              console.warn('[Kakao Places] 자동완성 검색 오류', { query, status });
+            }
+            collectNext();
+          });
+        };
+
+        collectNext();
       });
     }
 
