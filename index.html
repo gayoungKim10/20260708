@@ -12,11 +12,10 @@
 
     gtag('config', 'G-FQM5TN868P');
   </script>
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=127d37705c82c57a9792ec156edc788b&libraries=services"></script>
-  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=__KAKAO_JAVASCRIPT_KEY__&libraries=services"></script>
   <style>
     :root {
-      --green: #1ed760;
+      --green: #39FF14;
       --green-dark: #1db954;
       --ink: #ffffff;
       --silver: #b3b3b3;
@@ -45,6 +44,20 @@
       height: 100%;
       display: grid;
       grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+    }
+
+    @media (min-width: 769px) {
+      html.mac-desktop .app,
+      html.windows-desktop .app {
+        width: 111.111%;
+        height: 111.111%;
+        zoom: .9;
+      }
+
+      html.mac-desktop .result,
+      html.windows-desktop .result {
+        transform: translateX(40px);
+      }
     }
 
     .panel {
@@ -89,6 +102,37 @@
     form {
       display: grid;
       gap: 14px;
+    }
+
+    .swap-places-row {
+      display: flex;
+      justify-content: center;
+      margin-block: -8px;
+    }
+
+    .swap-places-button {
+      width: 34px;
+      min-height: 22px;
+      padding: 0;
+      color: var(--green);
+      background: transparent;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      transform: translateX(-34px);
+    }
+
+    .swap-places-button:hover {
+      color: var(--green);
+      background: var(--surface-2);
+    }
+
+    @media (min-width: 769px) {
+      .swap-places-button {
+        width: 34px;
+        min-height: 18px;
+      }
     }
 
     label {
@@ -162,7 +206,7 @@
 
     #makeRoute {
       min-height: 68px;
-      font-size: 24px;
+      font-size: 30px;
       font-weight: 900;
       letter-spacing: 2px;
     }
@@ -218,6 +262,58 @@
     }
 
     .watch-button[hidden] { display: none; }
+
+    .recent-search {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--silver);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .recent-search strong {
+      flex: 0 0 auto;
+      color: var(--near-white);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .recent-search-list {
+      min-width: 0;
+      display: flex;
+      flex: 1 1 auto;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .recent-search-item {
+      width: auto;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      color: var(--silver);
+      background: transparent;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.3;
+      letter-spacing: 0;
+      text-align: left;
+      text-transform: none;
+    }
+
+    .recent-search-item:hover {
+      color: var(--ink);
+      background: var(--surface-3);
+    }
+
+    @media (min-width: 769px) {
+      .recent-search {
+        min-height: 40px;
+      }
+    }
 
     button {
       min-height: 40px;
@@ -329,7 +425,47 @@
       line-height: 1.45;
     }
 
+    .current-location-button {
+      position: absolute;
+      z-index: 8;
+      top: 18px;
+      right: 18px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 9999px;
+      color: var(--ink);
+      background: rgba(24, 24, 24, .92);
+      box-shadow: rgba(0, 0, 0, .36) 0 6px 14px;
+      font-size: 13px;
+      letter-spacing: 0;
+      text-transform: none;
+      backdrop-filter: blur(10px);
+    }
+
+    .current-location-button:hover,
+    .current-location-button.active {
+      color: #000;
+      background: var(--green);
+    }
+
+    .current-location-dot {
+      width: 20px;
+      height: 20px;
+      border: 4px solid #fff;
+      border-radius: 50%;
+      background: #4285f4;
+      box-shadow: 0 0 0 7px rgba(66, 133, 244, .24), rgba(0, 0, 0, .4) 0 3px 8px;
+    }
+
     @media (min-width: 769px) {
+      .current-location-button {
+        position: fixed;
+        z-index: 30;
+        top: 18px;
+        right: 18px;
+      }
+
       .result {
         position: fixed;
         z-index: 12;
@@ -458,7 +594,7 @@
 
       .panel > section {
         order: 0;
-        padding: max(22px, env(safe-area-inset-top)) 22px 0;
+        padding: max(22px, env(safe-area-inset-top)) 22px 18px;
       }
 
       #routeForm {
@@ -467,6 +603,7 @@
 
       #routeForm > .place-field,
       #routeForm > .map-pick-row,
+      #routeForm > .recent-search,
       #routeForm > label,
       #routeForm > .button-row,
       #routeForm > #sendWatch,
@@ -482,7 +619,8 @@
 
       #routeForm > .place-field,
       #routeForm > .map-pick-row,
-      #routeForm > label:nth-of-type(3),
+      #routeForm > .recent-search,
+      #routeForm > label:nth-of-type(4),
       #routeForm > .loop-toggle,
       #routeForm > .button-row,
       .status,
@@ -495,15 +633,17 @@
       }
 
       #routeForm > .place-field:nth-of-type(1) { order: 1; }
-      #routeForm > .place-field:nth-of-type(2) { order: 2; }
-      #routeForm > .map-pick-row { order: 3; }
-      #routeForm > label:nth-of-type(3) { order: 4; }
-      #routeForm > .loop-toggle { order: 5; }
+      #routeForm > .swap-places-row { order: 2; margin: -10px 0 6px; }
+      #routeForm > .place-field:nth-of-type(2) { order: 3; }
+      #routeForm > .map-pick-row { display: none; }
+      #routeForm > .loop-toggle { order: 4; }
+      #routeForm > .recent-search { order: 5; }
+      #routeForm > label:nth-of-type(4) { order: 6; }
       .result { display: contents; }
-      .status { order: 6; padding-top: 6px; }
+      .status { order: 7; padding-top: 6px; }
 
       .map-area {
-        order: 7;
+        order: 8;
         width: 100%;
         min-height: 0;
         height: clamp(300px, 42vh, 400px);
@@ -511,27 +651,58 @@
       }
 
       .button-row {
-        order: 8;
+        order: 9;
         grid-template-columns: 1fr;
         padding-inline: 22px;
       }
 
       .route-control-stack {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
         gap: 8px;
+        align-items: stretch;
+      }
+
+      .route-control-stack .history-nav {
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+      }
+
+      .route-control-stack #prevRoute,
+      .route-control-stack #nextRoute {
+        min-height: 44px;
       }
 
       #sendWatch {
-        order: 9;
+        order: 10;
         margin-inline: 22px;
       }
 
       .metric-grid {
-        order: 10;
+        order: 11;
         grid-template-columns: 1fr;
       }
 
       .note {
-        order: 11;
+        order: 12;
+      }
+
+      .place-input-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .mobile-map-pick {
+        display: inline-grid;
+        min-height: 42px;
+        padding-inline: 12px;
+        place-items: center;
+        white-space: normal;
+        font-size: 12px;
+        line-height: 1.2;
+        letter-spacing: 0;
+        text-transform: none;
       }
 
       .map-badge {
@@ -559,9 +730,10 @@
       }
 
       .loop-toggle {
-        width: 100%;
-        max-width: 100%;
+        width: calc(100% - 44px);
+        max-width: calc(100% - 44px);
         box-sizing: border-box;
+        align-self: center;
       }
 
       .map-pick-row {
@@ -617,6 +789,11 @@
         top: 12px;
       }
 
+      .current-location-button {
+        top: 12px;
+        right: 34px;
+      }
+
       .map-fullscreen-close {
         left: 12px;
         top: 12px;
@@ -656,6 +833,13 @@
         z-index: 1002;
       }
 
+      .map-area.is-fullscreen .current-location-button {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 1002;
+      }
+
       body.map-fullscreen-open {
         overflow: hidden;
       }
@@ -677,11 +861,7 @@
       }
     }
 
-    .map-pick-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .map-pick-row { display: none; }
 
     .map-pick-row button {
       min-height: 36px;
@@ -716,6 +896,24 @@
 
     .place-field {
       position: relative;
+      color: var(--green);
+    }
+
+    .place-input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mobile-map-pick {
+      display: inline-grid;
+      min-height: 42px;
+      padding-inline: 12px;
+      place-items: center;
+      white-space: normal;
+      font-size: 11px;
+      line-height: 1.15;
     }
 
     .place-suggestions {
@@ -764,6 +962,11 @@
       font-weight: 400;
       line-height: 1.3;
     }
+
+    @media (max-width: 768px) {
+      .place-input-row { display: grid; }
+      .mobile-map-pick { display: inline-grid; }
+    }
   </style>
 </head>
 <body>
@@ -773,7 +976,7 @@
         <h1 class="brand-title">
           <span>STOPLESS</span>
           <svg class="brand-logo" viewBox="0 0 96 96" role="img" aria-label="STOPLESS runner logo">
-            <path d="M14 76c24 4 49-1 68-18" fill="none" stroke="#1ed760" stroke-width="5" stroke-linecap="round"/>
+            <path d="M14 76c24 4 49-1 68-18" fill="none" stroke="#39FF14" stroke-width="5" stroke-linecap="round"/>
             <path d="M24 70c17 1 37-3 52-15" fill="none" stroke="#44e574" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 8"/>
             <path d="M78 40c4 0 7 3 7 7 0 6-7 12-7 12s-7-6-7-12c0-4 3-7 7-7z" fill="#2abf68"/>
             <circle cx="78" cy="47" r="2.6" fill="#121212"/>
@@ -783,31 +986,48 @@
             <path d="M29 43l-7 11" fill="none" stroke="#137a49" stroke-width="4" stroke-linecap="round"/>
             <path d="M57 31l12 10 8-11" fill="none" stroke="#1fab63" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M54 47l-13 16-19 8" fill="none" stroke="#137a49" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M50 50l14 11 8 16" fill="none" stroke="#1ed760" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M50 50l14 11 8 16" fill="none" stroke="#39FF14" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M17 72c0 9 8 11 16 8" fill="none" stroke="#44e574" stroke-width="5" stroke-linecap="round"/>
             <path d="M65 78c7 5 15 5 21 0" fill="none" stroke="#44e574" stroke-width="5" stroke-linecap="round"/>
           </svg>
         </h1>
-        <p>카카오 지도 위에서 보행자 통행 가능 경로를 찾고, 서울 전체 신호등 데이터를 기준으로 지나가는 횡단보도를 최대한 줄입니다.</p>
+        <p>카카오맵의 도보 경로 데이터를 기준으로 목표 거리에 맞는 러닝 코스를 추천합니다.</p>
       </section>
 
       <form id="routeForm">
         <label class="place-field">
           시작점
-          <input id="startInput" placeholder="예: 교대역, 양재역, 37.4937, 127.0142">
+          <span class="place-input-row">
+            <input id="startInput" placeholder="예: 교대역, 양재역, 37.4937, 127.0142">
+            <button class="secondary mobile-map-pick" type="button" data-pick-mode="start">지도에서<br>시작점 선택</button>
+          </span>
           <div id="startSuggestions" class="place-suggestions"></div>
         </label>
+        <div class="swap-places-row">
+          <button id="swapPlaces" class="swap-places-button" type="button" aria-label="시작점과 도착점 교환" title="시작점과 도착점 교환">⇅</button>
+        </div>
         <label class="place-field">
           도착점
-          <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
+          <span class="place-input-row">
+            <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
+            <button class="secondary mobile-map-pick" type="button" data-pick-mode="end">지도에서<br>도착점 선택</button>
+          </span>
           <div id="endSuggestions" class="place-suggestions"></div>
         </label>
+        <label class="loop-toggle">
+          <input id="loopRoute" type="checkbox">
+          출발지로 돌아오는 루프 코스
+        </label>
+        <div class="recent-search" aria-live="polite">
+          <strong>최근 검색</strong>
+          <div id="recentSearchList" class="recent-search-list"></div>
+        </div>
         <div class="map-pick-row" aria-label="지도에서 위치 선택">
-          <button id="pickStart" class="secondary" type="button">
+          <button id="pickStart" class="secondary" type="button" data-pick-mode="start">
             <span class="pick-label-full">지도에서 시작점 선택</span>
             <span class="pick-label-short">지도에서 시작 선택</span>
           </button>
-          <button id="pickEnd" class="secondary" type="button">
+          <button id="pickEnd" class="secondary" type="button" data-pick-mode="end">
             <span class="pick-label-full">지도에서 도착점 선택</span>
             <span class="pick-label-short">지도에서 도착 선택</span>
           </button>
@@ -821,10 +1041,6 @@
             <label><input type="radio" name="targetRange" value="7-9"><span>7-9km</span></label>
             <label><input type="radio" name="targetRange" value="9-11"><span>9-11km</span></label>
           </div>
-        </label>
-        <label class="loop-toggle">
-          <input id="loopRoute" type="checkbox">
-          출발지로 돌아오는 루프 코스
         </label>
         <div class="button-row">
           <button id="makeRoute" type="submit">RUN!</button>
@@ -843,25 +1059,32 @@
         <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 RUN!을 눌러 주세요.</div>
         <div class="metric-grid">
           <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
-          <div class="metric"><b id="crossings">-</b><span>신호등 있는 최대 횡단보도 수</span></div>
+          <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
         </div>
-        <p class="note">빨간 점은 전체 신호등 데이터가 아니라 이번 경로가 실제로 매우 가까이 지난 횡단 지점만 표시합니다.</p>
+        <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
       </section>
     </aside>
 
     <main class="map-area">
       <div id="map"></div>
+      <button id="currentLocationBtn" class="current-location-button" type="button" aria-label="현재 위치 표시">◎ 현재 위치</button>
       <button id="mapFullscreenBtn" class="map-fullscreen-toggle" type="button" aria-label="지도 전체화면" title="지도 전체화면">⛶</button>
       <button id="mapFullscreenCloseBtn" class="map-fullscreen-close" type="button" aria-label="전체화면 닫기" title="전체화면 닫기" hidden>X</button>
       <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.</div>
     </main>
   </div>
 
-  <script src="./traffic-lights.js"></script>
   <script>
+    const isMacDesktop = /Macintosh|MacIntel/.test(navigator.userAgent)
+      && (navigator.maxTouchPoints || 0) === 0;
+    const isWindowsDesktop = /Windows NT/.test(navigator.userAgent);
+    if (isMacDesktop) document.documentElement.classList.add("mac-desktop");
+    if (isWindowsDesktop) document.documentElement.classList.add("windows-desktop");
+
     const KAKAO_READY = typeof kakao !== "undefined" && kakao.maps;
+    const KAKAO_WALK_API_URL = "/api/kakao-walk";
+    const KAKAO_PLACE_API_URL = "/api/kakao-place-search";
     const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
-    const lightRows = window.SEOCHO_TRAFFIC_LIGHTS || [];
     const landmarks = {
       "교대역": [37.4937, 127.0142],
       "고속터미널역": [37.5049, 127.0049],
@@ -887,18 +1110,73 @@
     const mapArea = document.querySelector(".map-area");
     const mapFullscreenBtn = document.querySelector("#mapFullscreenBtn");
     const mapFullscreenCloseBtn = document.querySelector("#mapFullscreenCloseBtn");
+    const currentLocationBtn = document.querySelector("#currentLocationBtn");
     const startInput = document.querySelector("#startInput");
     const endInput = document.querySelector("#endInput");
     const startSuggestions = document.querySelector("#startSuggestions");
     const endSuggestions = document.querySelector("#endSuggestions");
+    const swapPlacesBtn = document.querySelector("#swapPlaces");
     const makeRouteBtn = document.querySelector("#makeRoute");
     const findNewBtn = document.querySelector("#findNew");
     const prevRouteBtn = document.querySelector("#prevRoute");
     const nextRouteBtn = document.querySelector("#nextRoute");
-    const pickStartBtn = document.querySelector("#pickStart");
-    const pickEndBtn = document.querySelector("#pickEnd");
+    const pickButtons = [...document.querySelectorAll("[data-pick-mode]")];
     const loopRouteInput = document.querySelector("#loopRoute");
     const sendWatchBtn = document.querySelector("#sendWatch");
+    const recentSearchListEl = document.querySelector("#recentSearchList");
+    const RECENT_SEARCH_STORAGE_KEY = "stopless.recent-route-search";
+    let recentSearches = [];
+
+    function restoreRecentSearch(entry) {
+      startInput.value = entry.startLabel;
+      endInput.value = entry.endLabel;
+      loopRouteInput.checked = entry.startLabel === entry.endLabel;
+      selectedStartPlace = null;
+      selectedEndPlace = null;
+      lastStart = null;
+      lastEnd = null;
+      setWatchButtonVisible(false);
+      resetRoutesHistory();
+      hideSuggestions(startSuggestions);
+      hideSuggestions(endSuggestions);
+    }
+
+    function renderRecentSearch() {
+      recentSearchListEl.replaceChildren();
+      recentSearches.forEach((entry) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "recent-search-item";
+        button.textContent = `${entry.startLabel}→${entry.endLabel}`;
+        button.title = button.textContent;
+        button.addEventListener("click", () => restoreRecentSearch(entry));
+        recentSearchListEl.appendChild(button);
+      });
+    }
+
+    function loadRecentSearch() {
+      recentSearches = [];
+      renderRecentSearch();
+      try {
+        localStorage.removeItem(RECENT_SEARCH_STORAGE_KEY);
+      } catch (error) {
+        console.warn("기존 최근 검색 저장값을 삭제하지 못했습니다.", error);
+      }
+    }
+
+    function saveRecentSearch(start, end, useLoop) {
+      const startLabel = startInput.value.trim() || start.label;
+      const endLabel = useLoop ? startLabel : (endInput.value.trim() || end.label);
+      const normalizeLabel = (label) => label.trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
+      const startKey = normalizeLabel(startLabel);
+      const endKey = normalizeLabel(endLabel);
+      recentSearches = recentSearches.filter((entry) => (
+        normalizeLabel(entry.startLabel) !== startKey
+        || normalizeLabel(entry.endLabel) !== endKey
+      ));
+      recentSearches.unshift({ startLabel, endLabel });
+      renderRecentSearch();
+    }
 
     let map;
     let geocoder;
@@ -914,49 +1192,30 @@
     let routesHistory = [];
     let currentRouteIndex = -1;
     let routeCandidateState = null;
+    let routeCandidateGeneration = 0;
+    let shownRouteSignatures = new Set();
+    let lastShownCrossingCount = -1;
     let mapFullscreenActive = false;
     let lastRouteBounds = null;
     let startSuggestTimer = null;
     let endSuggestTimer = null;
+    const placeSearchCache = new Map();
+    const placeSearchRequests = new Map();
     let selectedStartPlace = null;
     let selectedEndPlace = null;
-    const ROUTE_CANDIDATE_BATCH_ATTEMPTS = 12;
-    const URBAN_ROUTE_SAMPLE_SPACING_METERS = 90;
-    const URBAN_ROUTE_SIGNAL_RADIUS_METERS = 190;
-    const URBAN_ROUTE_MAX_UNSUPPORTED_RATIO = .42;
-    const URBAN_ROUTE_MAX_UNSUPPORTED_RUN_METERS = 650;
-
-    if (typeof proj4 === "function") {
-      proj4.defs("EPSG:5186", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs");
-    }
-
-    function tmToLatLng(x, y) {
-      if (typeof proj4 === "function") {
-        const result = proj4("EPSG:5186", "WGS84", [x, y]);
-        return { lat: result[1], lng: result[0], x, y };
-      }
-      const lat = 38 + ((y - 600000) / 111000);
-      const lng = 127 + ((x - 200000) / (111000 * Math.cos(lat * Math.PI / 180)));
-      return { lat, lng, x, y };
-    }
+    let currentLocationOverlay = null;
+    let currentLocationWatchId = null;
+    let currentLocationPoint = null;
+    const ROUTE_CANDIDATE_BATCH_ATTEMPTS = 3;
+    const INITIAL_ROUTE_CANDIDATE_LOOKAHEAD = 6;
+    const ROUTE_MODES = ["BROAD_FIRST", "SHORTEST", "ACCESSIBLE"];
 
     function latLngToTm(lat, lng) {
-      if (typeof proj4 === "function") {
-        const result = proj4("WGS84", "EPSG:5186", [lng, lat]);
-        return { x: result[0], y: result[1] };
-      }
       return {
         x: 200000 + (lng - 127) * 111000 * Math.cos(lat * Math.PI / 180),
         y: 600000 + (lat - 38) * 111000
       };
     }
-
-    const trafficLights = lightRows.map(([id, addr, name, x, y]) => ({
-      id,
-      addr,
-      name,
-      ...tmToLatLng(x, y)
-    })).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
     function initMap() {
       if (!KAKAO_READY) {
@@ -971,6 +1230,63 @@
       places = new kakao.maps.services.Places();
       map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
       kakao.maps.event.addListener(map, "click", handleMapClick);
+    }
+
+    function showCurrentLocation(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !map) return;
+      const firstLocation = !currentLocationPoint;
+      currentLocationPoint = { lat, lng };
+      const mapPosition = new kakao.maps.LatLng(lat, lng);
+      if (!currentLocationOverlay) {
+        currentLocationOverlay = new kakao.maps.CustomOverlay({
+          position: mapPosition,
+          content: '<div class="current-location-dot" title="현재 위치"></div>',
+          xAnchor: .5,
+          yAnchor: .5,
+          zIndex: 12
+        });
+        currentLocationOverlay.setMap(map);
+      } else {
+        currentLocationOverlay.setPosition(mapPosition);
+      }
+      currentLocationBtn.disabled = false;
+      currentLocationBtn.classList.add("active");
+      currentLocationBtn.textContent = "◎ 현재 위치";
+      if (firstLocation) map.panTo(mapPosition);
+    }
+
+    function handleLocationError(error) {
+      currentLocationBtn.disabled = false;
+      currentLocationBtn.classList.remove("active");
+      const messages = {
+        1: "현재 위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.",
+        2: "현재 위치를 확인할 수 없습니다.",
+        3: "현재 위치 확인 시간이 초과되었습니다."
+      };
+      statusEl.textContent = messages[error.code] || "현재 위치를 확인하지 못했습니다.";
+    }
+
+    function startCurrentLocationTracking() {
+      if (!navigator.geolocation) {
+        statusEl.textContent = "이 브라우저에서는 현재 위치 기능을 지원하지 않습니다.";
+        return;
+      }
+      if (currentLocationPoint) {
+        map.panTo(new kakao.maps.LatLng(currentLocationPoint.lat, currentLocationPoint.lng));
+      }
+      if (currentLocationWatchId !== null) return;
+      currentLocationBtn.disabled = true;
+      currentLocationBtn.textContent = "위치 확인 중…";
+      currentLocationWatchId = navigator.geolocation.watchPosition(
+        showCurrentLocation,
+        (error) => {
+          currentLocationWatchId = null;
+          handleLocationError(error);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
+      );
     }
 
     function refreshMapLayout() {
@@ -1017,8 +1333,7 @@
 
     function setPickMode(mode) {
       pickMode = pickMode === mode ? null : mode;
-      pickStartBtn.classList.toggle("active", pickMode === "start");
-      pickEndBtn.classList.toggle("active", pickMode === "end");
+      pickButtons.forEach((button) => button.classList.toggle("active", pickMode === button.dataset.pickMode));
       mapBadgeEl.textContent = pickMode
         ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
         : "파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.";
@@ -1081,55 +1396,33 @@
       return null;
     }
 
-    function kakaoPlaceSearch(text) {
-      return new Promise((resolve, reject) => {
-        if (!places) {
-          reject(new Error('Kakao place search is not available.'));
-          return;
-        }
-
-        const queries = [text, `서울 ${text}`, `서초구 ${text}`];
-        let queryIndex = 0;
-
-        const tryNextQuery = () => {
-          const query = queries[queryIndex];
-          places.keywordSearch(query, (rows, status) => {
-            if (status === kakao.maps.services.Status.OK && rows.length) {
-              const row = rows[0];
-              const lat = Number(row.y);
-              const lng = Number(row.x);
-              resolve({ label: row.place_name || text, lat, lng, ...latLngToTm(lat, lng) });
-              return;
-            }
-
-            queryIndex += 1;
-            if (queryIndex < queries.length) {
-              tryNextQuery();
-            } else {
-              reject(new Error(`Cannot find location: ${text}`));
-            }
-          });
-        };
-
-        tryNextQuery();
-      });
+    async function kakaoPlaceSearch(text) {
+      const rows = await searchKakaoPlaces(text);
+      if (!rows.length) throw new Error(`장소를 찾을 수 없습니다: ${text}`);
+      const row = rows[0];
+      const lat = Number(row.y);
+      const lng = Number(row.x);
+      return { label: row.place_name || text, lat, lng, ...latLngToTm(lat, lng) };
     }
 
-    function searchKakaoPlaces(text) {
-      return new Promise((resolve) => {
-        if (!places || text.trim().length < 2) {
-          resolve([]);
-          return;
-        }
+    async function searchKakaoPlaces(text) {
+      const query = text.trim();
+      if (query.length < 2) return [];
+      const cacheKey = query.toLocaleLowerCase("ko-KR");
+      if (placeSearchCache.has(cacheKey)) return placeSearchCache.get(cacheKey);
+      if (placeSearchRequests.has(cacheKey)) return placeSearchRequests.get(cacheKey);
 
-        places.keywordSearch(`서울 ${text}`, (rows, status) => {
-          if (status === kakao.maps.services.Status.OK && rows.length) {
-            resolve(rows.slice(0, 6));
-          } else {
-            resolve([]);
-          }
-        });
-      });
+      const request = fetch(`${KAKAO_PLACE_API_URL}?query=${encodeURIComponent(query)}`)
+        .then(async (response) => {
+          if (!response.ok) return [];
+          const data = await response.json();
+          const rows = (data.documents || []).slice(0, 10);
+          placeSearchCache.set(cacheKey, rows);
+          return rows;
+        })
+        .finally(() => placeSearchRequests.delete(cacheKey));
+      placeSearchRequests.set(cacheKey, request);
+      return request;
     }
 
     function hideSuggestions(container) {
@@ -1191,14 +1484,16 @@
         }
         clearTimeout(timerName === "start" ? startSuggestTimer : endSuggestTimer);
         const run = async () => {
-          const rows = await searchKakaoPlaces(input.value);
+          const query = input.value.trim();
+          const rows = await searchKakaoPlaces(query);
+          if (input.value.trim() !== query) return;
           renderPlaceSuggestions(input, container, rows);
         };
 
         if (timerName === "start") {
-          startSuggestTimer = setTimeout(run, 220);
+          startSuggestTimer = setTimeout(run, 60);
         } else {
-          endSuggestTimer = setTimeout(run, 220);
+          endSuggestTimer = setTimeout(run, 60);
         }
       });
 
@@ -1219,219 +1514,18 @@
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
-    function pointToSegmentDistance(p, a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      if (!dx && !dy) return distance(p, a);
-      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
-      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-    }
-
-    function nearestSegmentInfo(p, points) {
-      let best = { distance: Infinity, index: -1, t: 0, segmentLength: 0 };
-      for (let i = 0; i < points.length - 1; i += 1) {
-        const a = points[i];
-        const b = points[i + 1];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const lengthSquared = dx * dx + dy * dy;
-        const t = lengthSquared
-          ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared))
-          : 0;
-        const projected = { x: a.x + dx * t, y: a.y + dy * t };
-        const segmentDistance = Math.hypot(p.x - projected.x, p.y - projected.y);
-        if (segmentDistance < best.distance) {
-          best = {
-            distance: segmentDistance,
-            index: i,
-            t,
-            segmentLength: Math.sqrt(lengthSquared)
-          };
-        }
-        if (best.distance < 3) break;
-      }
-      return best;
-    }
-
-    function routeNearLength(p, points, radius) {
-      let meters = 0;
-      for (let i = 0; i < points.length - 1; i += 1) {
-        const a = points[i];
-        const b = points[i + 1];
-        const closeA = distance(p, a) <= radius;
-        const closeB = distance(p, b) <= radius;
-        const closeSegment = pointToSegmentDistance(p, a, b) <= radius;
-        if (closeSegment) {
-          meters += closeA && closeB ? distance(a, b) : Math.min(distance(a, b), radius * 1.8);
-        }
-      }
-      return meters;
-    }
-
-    function crossingConfidence(light, tmPoints, nearest) {
-      if (nearest.distance > 18) return 0;
-      const nearLength = routeNearLength(light, tmPoints, 18);
-      if (nearLength > 96) return 0;
-
-      const before = tmPoints[Math.max(0, nearest.index - 1)];
-      const after = tmPoints[Math.min(tmPoints.length - 1, nearest.index + 2)];
-      const approach = distance(light, before);
-      const departure = distance(light, after);
-      const passesThrough = approach > 14 && departure > 14;
-      const tightHit = nearest.distance <= 6 && passesThrough;
-      const likelyCrossing = nearest.distance <= 12 && passesThrough && nearLength <= 70;
-
-      if (tightHit) return 1;
-      if (likelyCrossing) return .72;
-      if (nearest.distance <= 10 && nearLength <= 58) return .58;
-      if (nearest.distance <= 15 && passesThrough && nearLength <= 84) return .42;
-      return 0;
-    }
-
-    function routeLength(points) {
-      return points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
-    }
-
-    function sampleRoutePoints(points, spacing = URBAN_ROUTE_SAMPLE_SPACING_METERS) {
-      if (!points.length) return [];
-      const samples = [points[0]];
-      let distanceToNext = spacing;
-
-      for (let i = 0; i < points.length - 1; i += 1) {
-        const a = points[i];
-        const b = points[i + 1];
-        const segmentLength = distance(a, b);
-        if (segmentLength <= 0) continue;
-        let walked = distanceToNext;
-
-        while (walked < segmentLength) {
-          const ratio = walked / segmentLength;
-          samples.push({
-            x: a.x + (b.x - a.x) * ratio,
-            y: a.y + (b.y - a.y) * ratio,
-            lat: a.lat + (b.lat - a.lat) * ratio,
-            lng: a.lng + (b.lng - a.lng) * ratio
-          });
-          walked += spacing;
-        }
-
-        distanceToNext = walked - segmentLength;
-      }
-
-      samples.push(points[points.length - 1]);
-      return samples;
-    }
-
-    function hasNearbyTrafficSignal(point, candidates, radiusMeters) {
-      const radiusSquared = radiusMeters * radiusMeters;
-      return candidates.some((light) => {
-        const dx = light.x - point.x;
-        const dy = light.y - point.y;
-        return dx * dx + dy * dy <= radiusSquared;
-      });
-    }
-
-    function analyzeUrbanRouteQuality(tmPoints) {
-      const routeMeters = routeLength(tmPoints);
-      const samples = sampleRoutePoints(tmPoints);
-      if (!samples.length) {
-        return { penalty: Number.POSITIVE_INFINITY, unsupportedRatio: 1, maxUnsupportedRun: routeMeters, samples: 0 };
-      }
-
-      const radius = URBAN_ROUTE_SIGNAL_RADIUS_METERS;
-      const minX = Math.min(...tmPoints.map((p) => p.x)) - radius;
-      const maxX = Math.max(...tmPoints.map((p) => p.x)) + radius;
-      const minY = Math.min(...tmPoints.map((p) => p.y)) - radius;
-      const maxY = Math.max(...tmPoints.map((p) => p.y)) + radius;
-      const candidateSignals = trafficLights.filter((light) => light.x >= minX && light.x <= maxX && light.y >= minY && light.y <= maxY);
-
-      let unsupportedSamples = 0;
-      let currentUnsupportedRun = 0;
-      let maxUnsupportedRun = 0;
-
-      samples.forEach((sample) => {
-        if (hasNearbyTrafficSignal(sample, candidateSignals, radius)) {
-          currentUnsupportedRun = 0;
-          return;
-        }
-
-        unsupportedSamples += 1;
-        currentUnsupportedRun += URBAN_ROUTE_SAMPLE_SPACING_METERS;
-        maxUnsupportedRun = Math.max(maxUnsupportedRun, currentUnsupportedRun);
-      });
-
-      const unsupportedRatio = unsupportedSamples / samples.length;
-      const hardPenalty = unsupportedRatio > URBAN_ROUTE_MAX_UNSUPPORTED_RATIO || maxUnsupportedRun > URBAN_ROUTE_MAX_UNSUPPORTED_RUN_METERS ? 1000 : 0;
-      const penalty = hardPenalty + unsupportedRatio * 100 + maxUnsupportedRun / 20;
-
-      return {
-        penalty,
-        unsupportedRatio,
-        maxUnsupportedRun,
-        samples: samples.length,
-        nearbySignalCount: candidateSignals.length,
-        routeMeters
-      };
-    }
-
     function latLngToRoutePoint(lat, lng) {
       return { lat, lng, ...latLngToTm(lat, lng) };
     }
 
-    function tmPathDistance(points, startIndex, endIndex) {
-      let meters = 0;
-      for (let i = startIndex; i < endIndex; i += 1) {
-        meters += distance(points[i], points[i + 1]);
-      }
-      return meters;
+    function localPointToLatLng(point) {
+      if (Number.isFinite(point.lat) && Number.isFinite(point.lng)) return [point.lat, point.lng];
+      const lat = 38 + ((point.y - 600000) / 111000);
+      const lng = 127 + ((point.x - 200000) / (111000 * Math.cos(lat * Math.PI / 180)));
+      return [lat, lng];
     }
 
-    function compactShortBranches(tmPoints) {
-      if (tmPoints.length < 5) return tmPoints;
-      let points = tmPoints.slice();
-      let changed = true;
-
-      while (changed) {
-        changed = false;
-        for (let i = 0; i < points.length - 3; i += 1) {
-          let best = null;
-          for (let j = i + 2; j < Math.min(points.length, i + 80); j += 1) {
-            const walked = tmPathDistance(points, i, j);
-            if (walked > 500) break;
-
-            const chord = distance(points[i], points[j]);
-            const isTinyReturn = chord < 38 && walked > chord * 2.4;
-            const isHook = chord < 95 && walked > 180 && walked > chord * 3.1;
-            if (isTinyReturn || isHook) {
-              best = { j, walked, chord };
-            }
-          }
-
-          if (best && best.j > i + 1) {
-            points.splice(i + 1, best.j - i - 1);
-            changed = true;
-            break;
-          }
-        }
-      }
-
-      return points;
-    }
-
-    function routeFromTmPoints(tmPoints, fallbackMeters) {
-      return {
-        latLngs: tmPoints.map((point) => [point.lat, point.lng]),
-        tmPoints,
-        meters: fallbackMeters
-      };
-    }
-
-    function tmPointToLatLng(point) {
-      const p = tmToLatLng(point.x, point.y);
-      return [p.lat, p.lng];
-    }
-
-    function buildLoopWaypointSets(start, targetMeters) {
+    function buildLoopWaypointSets(start, targetMeters, generation = 0) {
       const radius = Math.min(
         Math.max(targetMeters / (Math.PI * 2) * 1.02, Math.max(160, targetMeters * .11)),
         1700
@@ -1449,14 +1543,15 @@
       const rotations = [0, 18, 36, 54, 72, 90, 126, 162];
       const scales = [.72, .86, 1, 1.14, 1.3];
       const sets = [];
+      const phase = (generation * 13) % 360;
 
       rotations.forEach((rotation, rotationIndex) => {
         basePatterns.forEach((pattern, patternIndex) => {
-          const scale = scales[(rotationIndex + patternIndex) % scales.length];
+          const scale = scales[(rotationIndex + patternIndex + generation) % scales.length];
           const stretch = patternIndex % 2 ? 1.18 : .88;
           const points = pattern.map((deg, pointIndex) => {
             const wobble = pointIndex % 2 ? 12 : -8;
-            const rad = (deg + rotation + wobble) * Math.PI / 180;
+            const rad = (deg + rotation + wobble + phase) * Math.PI / 180;
             return {
               x: start.x + Math.cos(rad) * radius * scale * stretch,
               y: start.y + Math.sin(rad) * radius * scale / stretch
@@ -1469,8 +1564,8 @@
       return sets;
     }
 
-    function buildWaypointSets(start, end, targetMeters) {
-      if (distance(start, end) < 80) return buildLoopWaypointSets(start, targetMeters);
+    function buildWaypointSets(start, end, targetMeters, generation = 0) {
+      if (distance(start, end) < 80) return buildLoopWaypointSets(start, targetMeters, generation);
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const direct = Math.max(distance(start, end), 1);
@@ -1490,11 +1585,15 @@
       const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
       const sideFactors = [1, -1, 1.28, -1.28, .7, -.7, 1.55, -1.55, .42, -.42, 1.9, -1.9, .25, -.25, 2.15, -2.15];
       const pushFactors = [.34, -.34, .12, -.12, .56, -.56, .74, -.74];
+      // 첫 탐색은 기존에 검증된 후보 형상을 그대로 사용한다. 후보가
+      // 소진된 다음 세대부터만 방향과 굴곡을 조금씩 바꾼다.
+      const spreadScale = generation === 0 ? 1 : .88 + (generation % 7) * .045;
+      const pushOffset = generation === 0 ? 0 : ((generation % 9) - 4) * .025;
 
       return sideFactors.flatMap((sign, index) => {
-        const spread = side * sign;
+        const spread = side * sign * spreadScale;
         return pushFactors.slice(0, index < 4 ? 5 : 3).map((pushFactor, pushIndex) => {
-          const push = forward * pushFactor;
+          const push = forward * (pushFactor + pushOffset);
           const bend = (pushIndex % 2 ? -.22 : .22) * side;
           const a = { x: center.x - tx * forward + nx * spread + tx * push, y: center.y - ty * forward + ny * spread + ty * push };
           const b = { x: center.x + tx * forward + nx * spread * .9 - tx * push, y: center.y + ty * forward + ny * spread * .9 - ty * push };
@@ -1504,48 +1603,59 @@
       });
     }
 
-    async function fetchPedestrianRoute(points) {
-      const coords = points.map(tmPointToLatLng).map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join(";");
-      const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?overview=full&geometries=geojson&steps=false`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("보행자 경로 API 응답이 없습니다.");
+    async function fetchPedestrianRoute(points, routeMode = "BROAD_FIRST") {
+      const coordinates = points.map(localPointToLatLng).map(([lat, lng]) => ({ lat, lng }));
+      const response = await fetch(KAKAO_WALK_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points: coordinates, routeMode })
+      });
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const error = new Error(errorBody.message || "카카오 도보 경로 API 응답이 없습니다.");
+        error.code = errorBody.code;
+        error.showAlert = errorBody.code === -10 || /limit|한도/i.test(error.message);
+        throw error;
+      }
       const data = await response.json();
-      if (!data.routes || !data.routes[0]) throw new Error("보행자 경로를 찾지 못했습니다.");
-      const route = data.routes[0];
-      const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+      if (data.status !== "OK" || !data.route) {
+        throw new Error(`카카오 도보 경로를 찾지 못했습니다. (${data.status || "UNKNOWN"})`);
+      }
+
+      const steps = (data.route.legs || []).flatMap((leg) => leg.steps || []);
+      const latLngs = [];
+      steps.forEach((step) => {
+        (step.path?.points || []).forEach(([lng, lat]) => {
+          const previous = latLngs[latLngs.length - 1];
+          if (!previous || previous[0] !== lat || previous[1] !== lng) latLngs.push([lat, lng]);
+        });
+      });
+      if (latLngs.length < 2) throw new Error("카카오 경로 좌표가 비어 있습니다.");
+
       const tmPoints = latLngs.map(([lat, lng]) => latLngToRoutePoint(lat, lng));
-      return routeFromTmPoints(tmPoints, route.distance);
-    }
+      const pedestrianGuides = steps.map((step) => ({
+        guidance: step.properties?.guidance || "",
+        distance: step.properties?.distance || 0,
+        time: step.properties?.time || 0,
+        lat: step.properties?.y,
+        lng: step.properties?.x
+      })).filter((step) => step.guidance);
+      const crossingGuides = pedestrianGuides.filter((step) => /횡단보도/.test(step.guidance));
+      const facilityGuides = pedestrianGuides.filter((step) => /육교|지하도|계단|경사로|엘리베이터|역사 내|보행자/.test(step.guidance));
 
-    function analyzeCrossings(tmPoints) {
-      const minX = Math.min(...tmPoints.map((p) => p.x)) - 110;
-      const maxX = Math.max(...tmPoints.map((p) => p.x)) + 110;
-      const minY = Math.min(...tmPoints.map((p) => p.y)) - 110;
-      const maxY = Math.max(...tmPoints.map((p) => p.y)) + 110;
-      const nearby = [];
-      let score = 0;
-
-      trafficLights.forEach((light) => {
-        if (light.x < minX || light.x > maxX || light.y < minY || light.y > maxY) return;
-        const nearest = nearestSegmentInfo(light, tmPoints);
-        const confidence = crossingConfidence(light, tmPoints, nearest);
-        if (confidence > 0) {
-          nearby.push({ ...light, nearest: nearest.distance, crossingConfidence: confidence });
-          score += confidence * Math.max(0, (14 - nearest.distance) / 14);
-        } else if (nearest.distance < 44) {
-          score += (44 - nearest.distance) / 500;
-        }
-      });
-
-      nearby.sort((a, b) => a.nearest - b.nearest);
-      const clusters = [];
-      nearby.filter((p) => p.crossingConfidence >= .42).forEach((point) => {
-        const cluster = clusters.find((group) => group.some((member) => distance(member, point) < 100));
-        if (cluster) cluster.push(point);
-        else clusters.push([point]);
-      });
-      const passedCrossings = clusters.map((cluster) => cluster.sort((a, b) => b.crossingConfidence - a.crossingConfidence || a.nearest - b.nearest)[0]);
-      return { nearby, passedCrossings, score, crossed: passedCrossings.length };
+      return {
+        latLngs,
+        tmPoints,
+        meters: data.route.properties?.totalDistance,
+        seconds: data.route.properties?.totalTime,
+        landingUrl: data.route.properties?.landingUrl,
+        pedestrianGuides,
+        crossingGuides,
+        facilityGuides,
+        crossed: crossingGuides.length,
+        routeMode,
+        source: "kakao-walk"
+      };
     }
 
     function routeCandidateKey(start, end, targetRange) {
@@ -1563,14 +1673,17 @@
       const cacheKey = routeCandidateKey(start, end, targetRange);
       if (!routeCandidateState || routeCandidateState.key !== cacheKey) {
         const targetMeters = (targetRange.min + targetRange.max) / 2;
+        const generation = routeCandidateGeneration++;
+        const routeMode = ROUTE_MODES[Math.min(generation, ROUTE_MODES.length - 1)];
         routeCandidateState = {
           key: cacheKey,
-          waypointSets: buildWaypointSets(start, end, targetMeters),
+          generation,
+          routeMode,
+          waypointSets: buildWaypointSets(start, end, targetMeters, generation),
           nextIndex: 0,
-          shownRouteSignatures: new Set(),
+          shownRouteSignatures,
           candidateSignatures: new Set(),
-          rankedCandidates: [],
-          lastShownCrossed: -1
+          rankedCandidates: []
         };
       }
       return routeCandidateState;
@@ -1582,45 +1695,14 @@
     }
 
     function compareRouteCandidates(a, b, targetRange) {
-      return Number(a.countingFailed) - Number(b.countingFailed)
-        || Number(a.urbanPenalty >= 1000) - Number(b.urbanPenalty >= 1000)
+      return Number(!a.insideTargetRange) - Number(!b.insideTargetRange)
         || a.crossed - b.crossed
-        || a.urbanPenalty - b.urbanPenalty
-        || a.crossingScore - b.crossingScore
         || routeTargetDelta(a, targetRange) - routeTargetDelta(b, targetRange)
         || a.meters - b.meters;
     }
 
-    function buildRouteCandidate(route) {
-      try {
-        const crossing = analyzeCrossings(route.tmPoints);
-        const urbanQuality = analyzeUrbanRouteQuality(route.tmPoints);
-        return {
-          ...route,
-          crossings: crossing.nearby,
-          passedCrossings: crossing.passedCrossings,
-          crossed: crossing.crossed,
-          crossingScore: crossing.score,
-          urbanPenalty: urbanQuality.penalty,
-          urbanUnsupportedRatio: urbanQuality.unsupportedRatio,
-          urbanMaxUnsupportedRun: urbanQuality.maxUnsupportedRun,
-          countingFailed: false
-        };
-      } catch (error) {
-        console.warn('Crosswalk counting failed; keeping route available.', error);
-        const urbanQuality = analyzeUrbanRouteQuality(route.tmPoints);
-        return {
-          ...route,
-          crossings: [],
-          passedCrossings: [],
-          crossed: 0,
-          crossingScore: Number.POSITIVE_INFINITY,
-          urbanPenalty: urbanQuality.penalty,
-          urbanUnsupportedRatio: urbanQuality.unsupportedRatio,
-          urbanMaxUnsupportedRun: urbanQuality.maxUnsupportedRun,
-          countingFailed: true
-        };
-      }
+    function isRouteInsideRecommendationRange(route, targetRange) {
+      return route.meters >= targetRange.min * .8 && route.meters <= targetRange.max * 1.2;
     }
 
     async function collectRouteCandidates(state, targetRange) {
@@ -1635,17 +1717,24 @@
         state.nextIndex += 1;
       }
 
-      const results = await Promise.allSettled(waypoints.map((waypoint) => fetchPedestrianRoute(waypoint)));
+      const results = await Promise.allSettled(
+        waypoints.map((waypoint) => fetchPedestrianRoute(waypoint, state.routeMode))
+      );
       let collected = 0;
+      let fulfilled = 0;
+      let firstError = null;
 
       results.forEach((result) => {
         if (result.status !== 'fulfilled') {
+          firstError ||= result.reason;
           console.warn(result.reason);
           return;
         }
 
-        const candidate = buildRouteCandidate(result.value);
-        if (!isRouteInsideTargetRange(candidate, targetRange)) return;
+        fulfilled += 1;
+        const candidate = result.value;
+        if (!isRouteInsideRecommendationRange(candidate, targetRange)) return;
+        candidate.insideTargetRange = isRouteInsideTargetRange(candidate, targetRange);
 
         const signature = routeSignature(candidate);
         if (state.candidateSignatures.has(signature)) return;
@@ -1655,33 +1744,46 @@
         collected += 1;
       });
 
+      if (waypoints.length && fulfilled === 0 && firstError) throw firstError;
+
       state.rankedCandidates.sort((a, b) => compareRouteCandidates(a, b, targetRange));
       console.info('[Route candidates] ranked pool', {
         attempted: waypoints.length,
+        routeMode: state.routeMode,
         collected,
         totalRanked: state.rankedCandidates.length,
         nextIndex: state.nextIndex,
         remainingWaypoints: Math.max(0, state.waypointSets.length - state.nextIndex),
         rankedPreview: state.rankedCandidates.slice(0, 8).map((route) => ({
           distanceMeters: Math.round(route.meters),
-          crossed: route.crossed,
-          crossingScore: Math.round(route.crossingScore * 100) / 100,
-          urbanPenalty: Math.round(route.urbanPenalty * 10) / 10,
-          unsupportedRatio: Math.round(route.urbanUnsupportedRatio * 100) / 100,
-          unsupportedRun: Math.round(route.urbanMaxUnsupportedRun)
+          kakaoGuidedCrossings: route.crossed
         }))
       });
     }
     function nextRankedRouteCandidate(state) {
+      const requireExactRange = state.nextIndex < state.waypointSets.length;
       return state.rankedCandidates.find((candidate) => {
         const signature = routeSignature(candidate);
         return !state.shownRouteSignatures.has(signature)
-          && candidate.crossed >= state.lastShownCrossed;
+          && candidate.crossed >= lastShownCrossingCount
+          && (!requireExactRange || candidate.insideTargetRange);
       }) || null;
     }
 
     async function choosePedestrianRoute(start, end, targetRange) {
       const state = ensureRouteCandidateState(start, end, targetRange);
+
+      if (!state.rankedCandidates.length) {
+        const lookahead = state.generation === 0
+          ? INITIAL_ROUTE_CANDIDATE_LOOKAHEAD
+          : ROUTE_CANDIDATE_BATCH_ATTEMPTS;
+        while (
+          state.nextIndex < state.waypointSets.length
+          && state.nextIndex < lookahead
+        ) {
+          await collectRouteCandidates(state, targetRange);
+        }
+      }
 
       while (state.nextIndex < state.waypointSets.length || nextRankedRouteCandidate(state)) {
         let candidate = nextRankedRouteCandidate(state);
@@ -1689,11 +1791,14 @@
           await collectRouteCandidates(state, targetRange);
           candidate = nextRankedRouteCandidate(state);
         }
-        if (!candidate) break;
+        if (!candidate) {
+          if (state.nextIndex < state.waypointSets.length) continue;
+          break;
+        }
 
         const signature = routeSignature(candidate);
         state.shownRouteSignatures.add(signature);
-        state.lastShownCrossed = Math.max(state.lastShownCrossed, candidate.crossed);
+        lastShownCrossingCount = candidate.crossed;
         return candidate;
       }
 
@@ -1706,7 +1811,7 @@
     function routeSignature(route) {
       const points = route.tmPoints || [];
       if (!points.length) {
-        return `${Math.round(route.meters / 25)}|empty`;
+        return `${Math.round(route.meters / 10)}|empty`;
       }
       const indexes = [
         0,
@@ -1717,9 +1822,9 @@
       ];
       const sampled = indexes.map((index) => {
         const point = points[Math.min(points.length - 1, Math.max(0, index))];
-        return `${Math.round(point.x / 10)},${Math.round(point.y / 10)}`;
+        return `${Math.round(point.x / 3)},${Math.round(point.y / 3)}`;
       });
-      return [Math.round(route.meters / 25), ...sampled].join("|");
+      return [Math.round(route.meters / 10), ...sampled].join("|");
     }
 
     function parseTargetRange() {
@@ -1777,10 +1882,10 @@
           const ratio = (target - walked) / segmentLength;
           const x = from.x + (to.x - from.x) * ratio;
           const y = from.y + (to.y - from.y) * ratio;
-          const point = tmToLatLng(x, y);
+          const [lat, lng] = localPointToLatLng({ x, y });
           const angle = Math.atan2(to.x - from.x, to.y - from.y) * 180 / Math.PI;
           const overlay = new kakao.maps.CustomOverlay({
-            position: new kakao.maps.LatLng(point.lat, point.lng),
+            position: new kakao.maps.LatLng(lat, lng),
             content: `<div class="route-arrow" style="transform: rotate(${angle}deg)"></div>`,
             xAnchor: .5,
             yAnchor: .5,
@@ -1847,7 +1952,7 @@
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
       drawBlueRoute(path, 8);
 
-      drawCrossings(route.passedCrossings);
+      drawCrossings(route.crossingGuides.filter((guide) => Number.isFinite(guide.lat) && Number.isFinite(guide.lng)));
       addPin(start, "시작점");
       addPin(end, "도착점");
 
@@ -1859,10 +1964,18 @@
       map.setBounds(bounds, 56, 56, 56, 56);
 
       const km = route.meters / 1000;
+      const routeModeLabel = {
+        BROAD_FIRST: "큰길 우선",
+        SHORTEST: "최단 경로",
+        ACCESSIBLE: "접근성 우선"
+      }[route.routeMode] || "보행 경로";
       distanceEl.textContent = `${km.toFixed(2)} km`;
       crossingsEl.textContent = `${route.crossed}개`;
-      statusEl.textContent = `${formatKmRange(targetRange)} 조건에 맞춰 횡단보도 통과 수가 적은 후보를 선택했습니다. 다시 짜기는 다음 차선책을 보여줍니다.`;
-      mapBadgeEl.textContent = `파란 선은 추천 경로입니다. 루프/왕복 구간도 하나의 선으로 표시합니다. 빨간 점 ${route.crossed}개는 신호등 있는 횡단 지점입니다.`;
+      statusEl.textContent = route.insideTargetRange
+        ? `${formatKmRange(targetRange)} 조건에 맞는 카카오 ${routeModeLabel} 보행 경로를 선택했습니다. FIND NEW는 다음 후보를 보여줍니다.`
+        : `${formatKmRange(targetRange)}에 가장 가까운 카카오 ${routeModeLabel} 보행 경로를 선택했습니다. FIND NEW는 횡단보도 수와 관계없이 다음 후보를 보여줍니다.`;
+      const facilitySummary = route.facilityGuides.length ? ` 기타 보행 안내 ${route.facilityGuides.length}건도 반영했습니다.` : "";
+      mapBadgeEl.textContent = `파란 선은 카카오 도보 경로입니다. 빨간 점 ${route.crossed}개는 안내 문구에 명시된 횡단 지점이며 전수 데이터는 아닙니다.${facilitySummary}`;
       setWatchButtonVisible(true);
     }
 
@@ -1875,6 +1988,9 @@
       routesHistory = [];
       currentRouteIndex = -1;
       routeCandidateState = null;
+      routeCandidateGeneration = 0;
+      shownRouteSignatures = new Set();
+      lastShownCrossingCount = -1;
       updateRouteNavButtons();
     }
 
@@ -1942,12 +2058,19 @@
         if (reset || !lastStart || !lastEnd) {
           resetRoutesHistory();
           await ensureRouteEndpoints(targetRange, useLoop, startText, endText);
+          if (reset) saveRecentSearch(lastStart, lastEnd, useLoop);
         }
 
-        const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        let route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         if (!route) {
-          alert("더 이상 추천 가능한 경로가 없습니다.");
-          statusEl.textContent = `${formatKmRange(targetRange)} 범위 안의 코스를 현재 조건에서 찾지 못했습니다. 루프가 필요하면 시작점을 조금 옮기거나 거리를 넓혀 주세요.`;
+          routeCandidateState = null;
+          statusEl.textContent = "기존 후보를 모두 확인해 다른 방향의 카카오 보행 경로를 찾고 있습니다.";
+          route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        }
+        if (!route) {
+          routeCandidateState = null;
+          alert("현재 조건에서 새 추천 경로를 찾지 못했습니다. 다시 시도하면 다른 방향으로 계속 탐색합니다.");
+          statusEl.textContent = `${formatKmRange(targetRange)} 범위의 새 경로를 찾지 못했습니다. FIND NEW를 누르면 다른 방향 후보를 계속 탐색합니다.`;
           return;
         }
 
@@ -1975,6 +2098,21 @@
     });
 
     findNewBtn.addEventListener("click", () => createAndStoreRoute({ reset: false }));
+    swapPlacesBtn.addEventListener("click", () => {
+      const startText = startInput.value;
+      const startPlace = selectedStartPlace;
+      startInput.value = endInput.value;
+      endInput.value = startText;
+      selectedStartPlace = selectedEndPlace;
+      selectedEndPlace = startPlace;
+      lastStart = null;
+      lastEnd = null;
+      setWatchButtonVisible(false);
+      resetRoutesHistory();
+      hideSuggestions(startSuggestions);
+      hideSuggestions(endSuggestions);
+      statusEl.textContent = "시작점과 도착점의 입력 위치만 교환했습니다. RUN!을 누르면 새 경로를 탐색합니다.";
+    });
     prevRouteBtn.addEventListener("click", showPreviousRoute);
     nextRouteBtn.addEventListener("click", showNextRoute);
     mapFullscreenBtn.addEventListener("click", () => setMapFullscreen(true));
@@ -1988,8 +2126,9 @@
       }
     });
 
-    pickStartBtn.addEventListener("click", () => setPickMode("start"));
-    pickEndBtn.addEventListener("click", () => setPickMode("end"));
+    pickButtons.forEach((button) => {
+      button.addEventListener("click", () => setPickMode(button.dataset.pickMode));
+    });
 
     document.querySelectorAll("input[name='targetRange']").forEach((input) => {
       input.addEventListener("change", () => {
@@ -2042,6 +2181,12 @@
       alert("서비스 준비 중입니다");
     });
 
+    currentLocationBtn.addEventListener("click", startCurrentLocationTracking);
+    window.addEventListener("beforeunload", () => {
+      if (currentLocationWatchId !== null) navigator.geolocation.clearWatch(currentLocationWatchId);
+    });
+
+    loadRecentSearch();
     initMap();
     startInput.value = "교대역";
     endInput.value = "예술의전당";

@@ -1,0 +1,15 @@
+.git
+.vercel
+.env
+.env.*
+20260708
+backups
+*.xlsx
+*.csv
+traffic-lights.js
+schema.sql
+DESIGN.md
+DESIGN[2].md
+\!DOCTYPE HTML.txt
+scripts/generate-gyeonggi-crosswalks-js.ps1
+scripts/generate-gyeonggi-crowk-js.ps1

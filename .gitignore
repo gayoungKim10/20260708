@@ -1,0 +1,7 @@
+.env
+env.js
+gyeonggi-crowk.js
+gyeonggi-crosswalks.js
+dist/
+.vercel
+.env*
