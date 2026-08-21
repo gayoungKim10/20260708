@@ -2,8 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>STOPLESS</title>
+  <script>
+    document.documentElement.classList.add("mobile-splash-pending");
+  </script>
+  <style>
+    html.mobile-splash-pending { background: #000; }
+  </style>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FQM5TN868P"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -30,6 +36,129 @@
 
     * { box-sizing: border-box; }
 
+    .splash-overlay { display: none; }
+
+    @media (min-width: 0) {
+      html.mobile-splash-pending,
+      html.mobile-splash-pending body {
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+
+      html.mobile-splash-pending .app {
+        visibility: hidden;
+      }
+
+      html.mobile-splash-exit .app {
+        visibility: visible;
+      }
+
+      .splash-overlay {
+        position: fixed;
+        z-index: 10000;
+        inset: 0;
+        display: grid;
+        width: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding:
+          max(20px, env(safe-area-inset-top))
+          max(20px, env(safe-area-inset-right))
+          max(20px, env(safe-area-inset-bottom))
+          max(20px, env(safe-area-inset-left));
+        place-items: center;
+        overflow: hidden;
+        color: #fff;
+        background: #000;
+        pointer-events: auto;
+        transition: opacity 250ms ease;
+      }
+
+      html.mobile-splash-exit .splash-overlay {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .splash-logo {
+        width: min(82vw, 380px);
+        aspect-ratio: 1 / 1.03;
+        transform: translateY(calc((env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 2));
+      }
+
+      .splash-logo svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .splash-red-light {
+        opacity: 1;
+        transform: scale(1);
+        transform-origin: center;
+        transform-box: fill-box;
+        transition: opacity 120ms linear, transform 120ms ease;
+      }
+
+      .splash-runner {
+        opacity: 0;
+        transform: scale(.72);
+        transform-origin: center;
+        transform-box: fill-box;
+        transition: opacity 260ms ease-out, transform 300ms cubic-bezier(.2, .85, .3, 1.15);
+      }
+
+      .splash-stop {
+        transform: translateX(82px);
+        transition: transform 220ms cubic-bezier(.15, .85, .25, 1);
+      }
+
+      .splash-less {
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: opacity 280ms ease-out 60ms, transform 280ms ease-out 60ms;
+      }
+
+      html.mobile-splash-flicker .splash-red-light {
+        animation: splashRedFlicker 400ms steps(1, end) both;
+      }
+
+      @keyframes splashRedFlicker {
+        0% { opacity: 1; transform: translate(0, 0) scale(1); }
+        14% { opacity: .28; transform: translate(1px, 0) scale(.98); }
+        28% { opacity: .88; transform: translate(-1px, 1px) scale(1); }
+        43% { opacity: .16; transform: translate(1px, -1px) scale(.96); }
+        58% { opacity: .7; transform: translate(0, 1px) scale(.99); }
+        72% { opacity: .08; transform: translate(-1px, 0) scale(.94); }
+        87% { opacity: .42; transform: translate(1px, 0) scale(.97); }
+        100% { opacity: .14; transform: translate(0, 0) scale(.92); }
+      }
+
+      html.mobile-splash-transition .splash-red-light {
+        opacity: 0;
+        transform: scale(.9);
+      }
+
+      html.mobile-splash-transition .splash-runner,
+      html.mobile-splash-transition .splash-less {
+        opacity: 1;
+        transform: none;
+      }
+
+      html.mobile-splash-transition .splash-stop {
+        transform: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .splash-overlay { transition-duration: 150ms; }
+        .splash-red-light,
+        .splash-runner,
+        .splash-stop,
+        .splash-less { transition-duration: 150ms; }
+
+        html.mobile-splash-flicker .splash-red-light { animation: none; }
+      }
+    }
+
     html,
     body {
       width: 100%;
@@ -40,13 +169,17 @@
       font-family: "Pretendard", "Segoe UI", -apple-system, Arial, sans-serif;
     }
 
+    body {
+      background: #171717;
+    }
+
     .app {
       height: 100%;
       display: grid;
       grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
     }
 
-    @media (min-width: 769px) {
+    @media (max-width: 0px) {
       html.mac-desktop .app,
       html.windows-desktop .app {
         width: 111.111%;
@@ -104,6 +237,19 @@
       gap: 14px;
     }
 
+    .top-control-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .place-actions {
+      display: none;
+    }
+
+    #mobileDistanceSelect {
+      display: none;
+    }
+
     .swap-places-row {
       display: flex;
       justify-content: center;
@@ -128,7 +274,7 @@
       background: var(--surface-2);
     }
 
-    @media (min-width: 769px) {
+    @media (max-width: 0px) {
       .swap-places-button {
         width: 34px;
         min-height: 18px;
@@ -263,6 +409,10 @@
 
     .watch-button[hidden] { display: none; }
 
+    .bottom-sheet { display: contents; }
+    .bottom-sheet-handle { display: none; }
+    .route-position { display: none; }
+
     .recent-search {
       min-width: 0;
       display: flex;
@@ -309,7 +459,7 @@
       background: var(--surface-3);
     }
 
-    @media (min-width: 769px) {
+    @media (max-width: 0px) {
       .recent-search {
         min-height: 40px;
       }
@@ -458,7 +608,7 @@
       box-shadow: 0 0 0 7px rgba(66, 133, 244, .24), rgba(0, 0, 0, .4) 0 3px 8px;
     }
 
-    @media (min-width: 769px) {
+    @media (max-width: 0px) {
       .current-location-button {
         position: fixed;
         z-index: 30;
@@ -563,7 +713,7 @@
       border-bottom: 9px solid rgba(255, 255, 255, .88);
     }
 
-    @media (max-width: 520px) {
+    @media (min-width: 0) {
       .button-row,
       .distance-options { grid-template-columns: 1fr; }
 
@@ -573,7 +723,7 @@
       }
     }
 
-    @media (max-width: 768px) {
+    @media (min-width: 0) {
       html,
       body {
         height: auto;
@@ -963,77 +1113,1051 @@
       line-height: 1.3;
     }
 
-    @media (max-width: 768px) {
+    @media (min-width: 0) {
+      input,
+      textarea,
+      select {
+        font-size: 16px;
+      }
+
       .place-input-row { display: grid; }
       .mobile-map-pick { display: inline-grid; }
+    }
+
+    @media (min-width: 0) {
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden;
+      }
+
+      .app {
+        position: relative;
+        display: block;
+        width: 100%;
+        max-width: 430px;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        margin: 0 auto;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0, 0, 0, .45);
+        transform: translateZ(0);
+      }
+
+      .splash-overlay {
+        right: auto;
+        left: 50%;
+        width: min(100%, 430px);
+        transform: translateX(-50%);
+      }
+
+      .map-area {
+        position: fixed;
+        z-index: 0;
+        inset: 0;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        padding: 0;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+
+      .panel {
+        position: fixed;
+        z-index: 20;
+        inset: 0;
+        display: block;
+        padding: 0;
+        overflow: visible;
+        background: transparent;
+        pointer-events: none;
+      }
+
+      #routeForm {
+        display: block;
+      }
+
+      .top-control-panel {
+        position: fixed;
+        z-index: 24;
+        top: max(10px, env(safe-area-inset-top));
+        left: 10px;
+        right: 10px;
+        width: calc(100% - 20px);
+        max-width: calc(100% - 20px);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+        gap: 7px 8px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 20px;
+        background: rgba(12, 12, 12, .88);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, .42);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        pointer-events: auto;
+      }
+
+      .top-control-panel > .place-field {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+        display: grid;
+        gap: 3px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, .1);
+        border-radius: 14px;
+        background: rgba(31, 31, 31, .94);
+      }
+
+      .top-control-panel > .place-field:first-of-type { grid-column: 1; grid-row: 1; }
+      .top-control-panel > .swap-places-row { grid-column: 2; grid-row: 1; }
+      .top-control-panel > .place-field:nth-of-type(2) { grid-column: 3; grid-row: 1; }
+
+      .place-field-label {
+        padding-inline: 4px;
+        color: var(--green);
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: .7px;
+      }
+
+      .top-control-panel .place-input-row {
+        display: block;
+      }
+
+      .top-control-panel .place-input-row input {
+        min-height: 30px;
+        padding: 0 4px;
+        overflow: hidden;
+        color: #fff;
+        background: transparent;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 30px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .top-control-panel .place-input-row input:focus {
+        box-shadow: none;
+      }
+
+      .place-actions {
+        display: grid;
+        min-width: 0;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+        gap: 4px;
+      }
+
+      .place-actions button {
+        width: 100%;
+        min-width: 0;
+        min-height: 28px;
+        padding: 2px 4px;
+        border-color: rgba(255, 255, 255, .14);
+        color: #d7d7d7;
+        background: rgba(8, 8, 8, .38);
+        font-size: 10px;
+        font-weight: 650;
+        line-height: 1.1;
+        letter-spacing: 0;
+        text-transform: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .top-control-panel .swap-places-row {
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+      }
+
+      .top-control-panel .swap-places-button {
+        width: 28px;
+        min-height: 32px;
+        transform: none;
+        font-size: 22px;
+      }
+
+      .top-control-panel > .loop-toggle {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: auto;
+        max-width: none;
+        min-height: 30px;
+        margin: 0;
+        padding: 0 10px;
+        justify-self: start;
+        color: #d2d2d2;
+        background: rgba(31, 31, 31, .9);
+        font-size: 11px;
+      }
+
+      .top-control-panel > .loop-toggle input {
+        width: 15px;
+        min-height: 15px;
+      }
+
+      .top-control-panel > .recent-search {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        min-height: 30px;
+        margin: 0;
+        padding: 0;
+        gap: 7px;
+        overflow: hidden;
+      }
+
+      .top-control-panel > .recent-search strong {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .top-control-panel .recent-search-list {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 5px;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .top-control-panel .recent-search-list::-webkit-scrollbar,
+      .top-control-panel .distance-options::-webkit-scrollbar { display: none; }
+
+      .top-control-panel .recent-search-item {
+        flex: 0 0 auto;
+        min-height: 25px;
+        padding: 3px 9px;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+
+      .top-control-panel > label:last-of-type {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        color: #f4f4f4;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .top-control-panel .distance-options {
+        display: flex;
+        min-width: 0;
+        gap: 5px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .top-control-panel .distance-options label {
+        flex: 0 0 auto;
+      }
+
+      .top-control-panel .distance-options span {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 10px;
+      }
+
+      .top-control-panel .place-suggestions {
+        top: calc(100% + 5px);
+        max-height: min(260px, 38dvh);
+        border-radius: 12px;
+      }
+
+      .button-row {
+        position: fixed;
+        z-index: 26;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: 10px;
+        display: grid;
+        width: calc(100% - 20px);
+        max-width: calc(100% - 20px);
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        gap: 8px;
+        margin: 0;
+        padding: 9px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 18px;
+        background: rgba(12, 12, 12, .9);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, .38);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        pointer-events: auto;
+      }
+
+      #makeRoute,
+      #findNew {
+        width: 100%;
+        min-width: 0;
+        min-height: 50px;
+        padding-inline: 8px;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 1.2px;
+        white-space: nowrap;
+      }
+
+      body.route-ready #findNew:not(:disabled) {
+        color: #000;
+        background: var(--green);
+      }
+
+      body.route-ready #makeRoute {
+        color: #fff;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+      }
+
+      .result {
+        position: fixed;
+        z-index: 25;
+        right: 10px;
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 78px);
+        left: 10px;
+        display: grid;
+        gap: 8px;
+        max-height: 29dvh;
+        margin: 0;
+        padding: 10px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 16px;
+        background: rgba(12, 12, 12, .88);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        pointer-events: auto;
+      }
+
+      .result:not(.has-route) {
+        padding: 8px 11px;
+      }
+
+      .result:not(.has-route) .metric-grid,
+      .result:not(.has-route) .result-actions,
+      .result:not(.has-route) .note {
+        display: none;
+      }
+
+      .result .status {
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        color: #f3f3f3;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .result .metric-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+        padding: 0;
+      }
+
+      .result .metric {
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(31, 31, 31, .94);
+        box-shadow: none;
+      }
+
+      .result .metric b,
+      .result #distance {
+        color: var(--green);
+        font-size: 21px;
+        font-weight: 850;
+      }
+
+      .result .metric span,
+      .result #distance + span {
+        margin-top: 2px;
+        color: #bdbdbd;
+        font-size: 10px;
+      }
+
+      .result-actions {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 7px;
+      }
+
+      .result .history-nav {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+      }
+
+      .result #prevRoute,
+      .result #nextRoute,
+      .result #sendWatch {
+        min-height: 34px;
+      }
+
+      .result #sendWatch {
+        width: 100%;
+        margin: 0;
+        font-size: 10px;
+      }
+
+      .result .note {
+        display: none;
+      }
+
+      .map-badge,
+      .map-fullscreen-toggle,
+      .map-fullscreen-close,
+      .map-area > .current-location-button,
+      .map-pick-row {
+        display: none;
+      }
+
+      .place-actions,
+      .top-control-panel,
+      .button-row,
+      .result {
+        touch-action: manipulation;
+      }
+    }
+
+    @media (min-width: 0) {
+      .top-control-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .place-card {
+        position: relative;
+        order: 1;
+        display: grid;
+        overflow: visible;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 15px;
+        background: rgba(28, 28, 28, .94);
+      }
+
+      .place-card > .place-field {
+        position: relative;
+        width: 100%;
+        min-width: 0;
+        min-height: 50px;
+        display: grid;
+        grid-template-columns: 9px 48px minmax(0, 1fr);
+        align-items: center;
+        gap: 6px;
+        padding: 5px 42px 5px 11px;
+        border: 0;
+        border-radius: 13px;
+        background: transparent;
+        transition: background-color 160ms ease;
+      }
+
+      .place-card > .place-field:first-child {
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
+        border-radius: 13px 13px 0 0;
+      }
+
+      .place-card > .place-field:last-child {
+        border-radius: 0 0 13px 13px;
+      }
+
+      .place-card > .place-field.active {
+        background: rgba(57, 255, 20, .055);
+      }
+
+      .place-active-dot {
+        width: 7px;
+        height: 7px;
+        border: 1px solid #8c8c8c;
+        border-radius: 50%;
+        background: transparent;
+        transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      }
+
+      .place-field.active .place-active-dot {
+        border-color: var(--green);
+        background: var(--green);
+        box-shadow: 0 0 0 3px rgba(57, 255, 20, .12);
+      }
+
+      .place-card .place-field-label {
+        padding: 0;
+        color: #aaa;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .3px;
+      }
+
+      .place-card .place-field.active .place-field-label {
+        color: var(--green);
+      }
+
+      .place-card .place-input-row {
+        display: block;
+        min-width: 0;
+      }
+
+      .place-card .place-input-row input {
+        min-height: 38px;
+        padding: 0;
+        color: #fff;
+        background: transparent;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 38px;
+      }
+
+      .place-card .swap-places-row {
+        position: absolute;
+        z-index: 4;
+        top: 50%;
+        right: 8px;
+        margin: 0;
+        transform: translateY(-50%);
+      }
+
+      .place-card .swap-places-button {
+        width: 30px;
+        min-height: 30px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 10px;
+        color: var(--green);
+        background: rgba(9, 9, 9, .9);
+        font-size: 20px;
+        transform: none;
+      }
+
+      .place-card .place-suggestions {
+        z-index: 40;
+        top: calc(100% + 5px);
+        right: 0;
+        left: 0;
+        max-height: min(260px, 38dvh);
+      }
+
+      .shared-place-actions {
+        order: 2;
+        display: grid;
+        grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr) minmax(84px, .8fr);
+        gap: 6px;
+      }
+
+      .shared-place-actions button {
+        min-width: 0;
+        min-height: 32px;
+        padding: 2px 8px;
+        border-color: rgba(255, 255, 255, .14);
+        color: #ddd;
+        background: rgba(31, 31, 31, .92);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      .shared-place-actions button.active {
+        color: #000;
+        background: var(--green);
+      }
+
+      .shared-place-actions .loop-toggle {
+        width: 100%;
+        max-width: none;
+        min-height: 32px;
+        margin: 0;
+        padding: 0 7px;
+        justify-content: center;
+        gap: 5px;
+        border: 1px solid rgba(255, 255, 255, .14);
+        color: #ddd;
+        background: rgba(31, 31, 31, .92);
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .shared-place-actions .loop-toggle input {
+        width: 14px;
+        min-height: 14px;
+      }
+
+      .top-control-panel > label:last-of-type {
+        order: 3;
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .top-control-panel > .distance-field {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 9px;
+        color: #f4f4f4;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      #mobileDistanceSelect {
+        display: block;
+        width: 100%;
+        min-height: 36px;
+        padding: 0 34px 0 13px;
+        border: 1px solid rgba(255, 255, 255, .14);
+        border-radius: 12px;
+        color: #fff;
+        background-color: rgba(31, 31, 31, .94);
+        font-size: 14px;
+        font-weight: 750;
+        outline: none;
+        appearance: auto;
+      }
+
+      .top-control-panel > .distance-field .distance-options {
+        display: none;
+      }
+
+      .suggestion-heading {
+        padding: 7px 10px 5px;
+        color: #9c9c9c;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .4px;
+      }
+
+      .top-control-panel > .loop-toggle {
+        order: 4;
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .top-control-panel > .recent-search {
+        order: 5;
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      #routeForm > .distance-field {
+        position: fixed;
+        z-index: 23;
+        top: calc(max(10px, env(safe-area-inset-top)) + 170px);
+        right: 16px;
+        left: 16px;
+        width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        color: #181818;
+        font-size: 10px;
+        font-weight: 850;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, .72);
+        pointer-events: auto;
+      }
+
+      #routeForm > .distance-field .distance-options {
+        display: grid;
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 5px;
+        overflow: visible;
+      }
+
+      #routeForm > .distance-field .distance-options label {
+        min-width: 0;
+      }
+
+      #routeForm > .distance-field .distance-options span {
+        min-height: 31px;
+        padding: 0 3px;
+        border: 1px solid rgba(255, 255, 255, .18);
+        border-radius: 9999px;
+        color: #fff;
+        background: rgba(20, 20, 20, .88);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .28);
+        font-size: 10px;
+        font-weight: 700;
+        text-shadow: none;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      #routeForm > .distance-field .distance-options input:checked + span {
+        color: #000;
+        background: var(--green);
+        border-color: var(--green);
+      }
+
+      .app > .current-location-button {
+        position: fixed;
+        z-index: 27;
+        top: auto;
+        right: 16px;
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 128px);
+        display: grid;
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, .22);
+        border-radius: 50%;
+        color: #111;
+        background: rgba(255, 255, 255, .96);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .38);
+        font-size: 0;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: bottom 180ms ease, background-color 180ms ease, color 180ms ease;
+      }
+
+      .app > .current-location-button::before {
+        content: "";
+        display: block;
+        position: absolute;
+        top: calc(50% + 1px);
+        left: 50%;
+        width: 25px;
+        height: 25px;
+        margin: 0;
+        transform: translate(-50%, -50%);
+        background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='%23111' stroke-width='2.8' stroke-linecap='round'%3E%3Ccircle cx='16' cy='16' r='8'/%3E%3Cpath d='M16 2v5M16 25v5M2 16h5M25 16h5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23111'/%3E%3C/svg%3E");
+      }
+
+      .app > .current-location-button::after {
+        content: none;
+      }
+
+      .app > .current-location-button.active {
+        color: #111;
+        background: #fff;
+      }
+
+      body.route-ready .app > .current-location-button {
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 108px + 29dvh);
+      }
+
+      .bottom-sheet {
+        --sheet-drag-y: 0px;
+        position: fixed;
+        z-index: 26;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: block;
+        height: calc(88px + env(safe-area-inset-bottom));
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, .14);
+        border-bottom: 0;
+        border-radius: 22px 22px 0 0;
+        background: rgba(12, 12, 12, .94);
+        box-shadow: 0 -10px 32px rgba(0, 0, 0, .4);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        pointer-events: auto;
+        transform: translateY(var(--sheet-drag-y));
+        transition: height 320ms cubic-bezier(.2, .8, .2, 1), transform 320ms cubic-bezier(.2, .8, .2, 1);
+        touch-action: pan-y;
+      }
+
+      .bottom-sheet.is-dragging {
+        transition: none;
+      }
+
+      .bottom-sheet[data-sheet-state="route"] {
+        height: calc(143px + env(safe-area-inset-bottom));
+      }
+
+      .bottom-sheet[data-sheet-state="initial"] {
+        height: calc(88px + env(safe-area-inset-bottom));
+      }
+
+      .bottom-sheet[data-sheet-state="expanded"] {
+        height: min(38dvh, 360px);
+      }
+
+      .bottom-sheet[data-sheet-state="hidden"] {
+        height: calc(143px + env(safe-area-inset-bottom));
+        transform: translateY(calc(100% - 34px + var(--sheet-drag-y)));
+      }
+
+      .bottom-sheet[data-sheet-state="hidden"]:not(.has-route-sheet) {
+        height: calc(88px + env(safe-area-inset-bottom));
+      }
+
+      .bottom-sheet-handle {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: 100%;
+        height: 38px;
+        min-height: 38px;
+        padding: 0;
+        place-items: center;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .bottom-sheet-grabber {
+        width: 38px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .42);
+      }
+
+      .bottom-sheet-hidden-arrow {
+        display: none;
+        color: #fff;
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1;
+        transform: translateY(2px);
+      }
+
+      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-grabber { display: none; }
+      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-hidden-arrow { display: block; }
+
+      .bottom-sheet[data-sheet-state="initial"] .bottom-sheet-handle {
+        display: none;
+      }
+
+      .bottom-sheet-scroll {
+        height: calc(100% - 38px);
+        overflow: hidden;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+      }
+
+      .bottom-sheet[data-sheet-state="initial"] .bottom-sheet-scroll {
+        height: 100%;
+      }
+
+      .bottom-sheet[data-sheet-state="expanded"] .bottom-sheet-scroll {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .bottom-sheet .result {
+        position: static;
+        display: grid;
+        width: auto;
+        max-height: none;
+        margin: 0;
+        padding: 0 12px calc(18px + env(safe-area-inset-bottom));
+        gap: 9px;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
+      .bottom-sheet .status { display: none; }
+
+      .bottom-sheet .button-row {
+        position: static;
+        display: grid;
+        width: 100%;
+        max-width: none;
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
+      .bottom-sheet[data-sheet-state="initial"] .metric-grid,
+      .bottom-sheet[data-sheet-state="initial"] .result-actions,
+      .bottom-sheet[data-sheet-state="route"] .result-actions,
+      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-scroll {
+        display: none;
+      }
+
+      .bottom-sheet[data-sheet-state="route"] .metric-grid,
+      .bottom-sheet[data-sheet-state="expanded"] .metric-grid {
+        display: grid;
+        touch-action: none;
+      }
+
+      .bottom-sheet[data-sheet-state="route"] .button-row {
+        margin-top: 0;
+      }
+
+      .bottom-sheet[data-sheet-state="expanded"] .result-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .bottom-sheet .history-nav {
+        display: grid;
+        grid-template-columns: 46px 1fr 46px;
+        gap: 12px;
+        align-items: center;
+        padding: 8px 2px 2px;
+      }
+
+      .bottom-sheet .route-position {
+        display: block;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .bottom-sheet .result #prevRoute,
+      .bottom-sheet .result #nextRoute {
+        width: 46px;
+        height: 46px;
+        min-height: 46px;
+        border-radius: 50%;
+        font-size: 28px;
+      }
+
+      .bottom-sheet .result .note {
+        display: block;
+        margin: 4px 2px 0;
+        padding: 14px;
+        border-radius: 14px;
+        color: #c9c9c9;
+        background: rgba(31, 31, 31, .92);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .bottom-sheet .result #sendWatch {
+        min-height: 50px;
+        margin: 0 0 2px;
+        font-size: 12px;
+      }
+
+      body.sheet-initial .app > .current-location-button {
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 94px);
+      }
+
+      body.sheet-route .app > .current-location-button {
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 149px);
+      }
+
+      body.sheet-expanded .app > .current-location-button {
+        bottom: calc(min(38dvh, 360px) + 8px);
+      }
+
+      body.sheet-hidden .app > .current-location-button {
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 34px);
+      }
     }
   </style>
 </head>
 <body>
+  <div id="mobileSplash" class="splash-overlay" role="img" aria-label="STOPLESS 시작 로고">
+    <div class="splash-logo" aria-hidden="true">
+      <svg viewBox="0 0 420 430" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="splashMetal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d0d0d0"/><stop offset=".48" stop-color="#777"/><stop offset="1" stop-color="#bcbcbc"/>
+          </linearGradient>
+          <filter id="splashRedGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="splashGreenGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g transform="translate(145 18)">
+          <rect width="130" height="252" rx="34" fill="url(#splashMetal)"/>
+          <rect x="128" y="62" width="11" height="25" rx="4" fill="#aaa"/>
+          <path d="M15 72a50 50 0 0 1 100 0" fill="none" stroke="#070707" stroke-width="10" stroke-linecap="round"/>
+          <circle cx="65" cy="72" r="41" fill="#020202"/>
+          <path d="M15 184a50 50 0 0 1 100 0" fill="none" stroke="#070707" stroke-width="10" stroke-linecap="round"/>
+          <circle cx="65" cy="184" r="41" fill="#020202"/>
+          <circle class="splash-red-light" cx="65" cy="72" r="29" fill="#ff2438" filter="url(#splashRedGlow)"/>
+        </g>
+        <g class="splash-runner" fill="none" stroke="#39ff14" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#splashGreenGlow)">
+          <circle cx="210" cy="202" r="31" fill="#092b09" stroke="none"/>
+          <circle cx="219" cy="179" r="7" fill="#39ff14" stroke="none"/>
+          <path d="M210 190l13 2 8 11 9-8M210 191l-10 16-13 5M204 205l15 12-4 14M204 205l-7 16-14 6"/>
+        </g>
+        <g font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="-2">
+          <text class="splash-stop" x="52" y="390" fill="#ff3042">STOP</text>
+          <text class="splash-less" x="218" y="390" fill="#39ff14">LESS</text>
+        </g>
+      </svg>
+    </div>
+  </div>
   <div class="app">
     <aside class="panel">
-      <section>
-        <h1 class="brand-title">
-          <span>STOPLESS</span>
-          <svg class="brand-logo" viewBox="0 0 96 96" role="img" aria-label="STOPLESS runner logo">
-            <path d="M14 76c24 4 49-1 68-18" fill="none" stroke="#39FF14" stroke-width="5" stroke-linecap="round"/>
-            <path d="M24 70c17 1 37-3 52-15" fill="none" stroke="#44e574" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 8"/>
-            <path d="M78 40c4 0 7 3 7 7 0 6-7 12-7 12s-7-6-7-12c0-4 3-7 7-7z" fill="#2abf68"/>
-            <circle cx="78" cy="47" r="2.6" fill="#121212"/>
-            <circle cx="55" cy="18" r="8" fill="#137a49"/>
-            <path d="M48 27l-9 15 14 8 9-15c3-5-8-14-14-8z" fill="#1fab63" stroke="#137a49" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M47 29c-7 3-13 8-19 15" fill="none" stroke="#1fab63" stroke-width="6" stroke-linecap="round"/>
-            <path d="M29 43l-7 11" fill="none" stroke="#137a49" stroke-width="4" stroke-linecap="round"/>
-            <path d="M57 31l12 10 8-11" fill="none" stroke="#1fab63" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M54 47l-13 16-19 8" fill="none" stroke="#137a49" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M50 50l14 11 8 16" fill="none" stroke="#39FF14" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 72c0 9 8 11 16 8" fill="none" stroke="#44e574" stroke-width="5" stroke-linecap="round"/>
-            <path d="M65 78c7 5 15 5 21 0" fill="none" stroke="#44e574" stroke-width="5" stroke-linecap="round"/>
-          </svg>
-        </h1>
-        <p>카카오맵의 도보 경로 데이터를 기준으로 목표 거리에 맞는 러닝 코스를 추천합니다.</p>
-      </section>
-
       <form id="routeForm">
-        <label class="place-field">
-          시작점
-          <span class="place-input-row">
-            <input id="startInput" placeholder="예: 교대역, 양재역, 37.4937, 127.0142">
-            <button class="secondary mobile-map-pick" type="button" data-pick-mode="start">지도에서<br>시작점 선택</button>
-          </span>
-          <div id="startSuggestions" class="place-suggestions"></div>
-        </label>
-        <div class="swap-places-row">
-          <button id="swapPlaces" class="swap-places-button" type="button" aria-label="시작점과 도착점 교환" title="시작점과 도착점 교환">⇅</button>
+        <div class="top-control-panel">
+        <div class="place-card">
+          <label class="place-field active" data-endpoint="start">
+            <span class="place-active-dot" aria-hidden="true"></span>
+            <span class="place-field-label">출발지</span>
+            <span class="place-input-row">
+              <input id="startInput" placeholder="현재 위치를 확인합니다…">
+            </span>
+            <div id="startSuggestions" class="place-suggestions"></div>
+          </label>
+          <div class="swap-places-row">
+            <button id="swapPlaces" class="swap-places-button" type="button" aria-label="시작점과 도착점 교환" title="시작점과 도착점 교환">⇅</button>
+          </div>
+          <label class="place-field" data-endpoint="end">
+            <span class="place-active-dot" aria-hidden="true"></span>
+            <span class="place-field-label">도착지</span>
+            <span class="place-input-row">
+              <input id="endInput" placeholder="어디까지 달릴까요?">
+            </span>
+            <div id="endSuggestions" class="place-suggestions"></div>
+          </label>
         </div>
-        <label class="place-field">
-          도착점
-          <span class="place-input-row">
-            <input id="endInput" placeholder="예: 예술의전당, 양재천 카페거리">
-            <button class="secondary mobile-map-pick" type="button" data-pick-mode="end">지도에서<br>도착점 선택</button>
-          </span>
-          <div id="endSuggestions" class="place-suggestions"></div>
-        </label>
-        <label class="loop-toggle">
-          <input id="loopRoute" type="checkbox">
-          출발지로 돌아오는 루프 코스
-        </label>
-        <div class="recent-search" aria-live="polite">
-          <strong>최근 검색</strong>
-          <div id="recentSearchList" class="recent-search-list"></div>
+        <div class="shared-place-actions" aria-label="선택한 위치 설정">
+          <button id="setActiveCurrentLocation" class="secondary" type="button">◎ 현위치</button>
+          <button id="setActiveMapLocation" class="secondary" type="button">⌖ 지도에서 선택</button>
+          <label class="loop-toggle">
+            <input id="loopRoute" type="checkbox">
+            루프 코스
+          </label>
         </div>
-        <div class="map-pick-row" aria-label="지도에서 위치 선택">
-          <button id="pickStart" class="secondary" type="button" data-pick-mode="start">
-            <span class="pick-label-full">지도에서 시작점 선택</span>
-            <span class="pick-label-short">지도에서 시작 선택</span>
-          </button>
-          <button id="pickEnd" class="secondary" type="button" data-pick-mode="end">
-            <span class="pick-label-full">지도에서 도착점 선택</span>
-            <span class="pick-label-short">지도에서 도착 선택</span>
-          </button>
         </div>
-        <label>
-          목표 거리
+        <div class="distance-field" role="group" aria-label="목표 거리">
           <div class="distance-options">
             <label><input type="radio" name="targetRange" value="1-3"><span>1-3km</span></label>
             <label><input type="radio" name="targetRange" value="3-5"><span>3-5km</span></label>
@@ -1041,37 +2165,46 @@
             <label><input type="radio" name="targetRange" value="7-9"><span>7-9km</span></label>
             <label><input type="radio" name="targetRange" value="9-11"><span>9-11km</span></label>
           </div>
-        </label>
-        <div class="button-row">
-          <button id="makeRoute" type="submit">RUN!</button>
-          <div class="route-control-stack">
-            <button id="findNew" class="secondary" type="button" aria-label="새 코스 찾기" title="새 코스 찾기">FIND NEW</button>
-            <div class="history-nav" aria-label="저장된 코스 탐색">
-              <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
-              <button id="nextRoute" class="secondary" type="button" aria-label="다음 코스" title="다음 코스" disabled>›</button>
-            </div>
-          </div>
         </div>
-        <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
+        <div class="button-row">
+          <button id="makeRoute" type="submit" form="routeForm">RUN!</button>
+          <button id="findNew" class="secondary" type="button" aria-label="새 코스 찾기" title="새 코스 찾기">FIND NEW</button>
+        </div>
       </form>
 
-      <section class="result">
-        <div class="status" id="status">시작점과 도착점, 목표 거리를 선택하고 RUN!을 눌러 주세요.</div>
-        <div class="metric-grid">
-          <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
-          <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
+      <section id="bottomSheet" class="bottom-sheet" data-sheet-state="initial" aria-label="경로 컨트롤">
+        <button id="bottomSheetHandle" class="bottom-sheet-handle" type="button" aria-label="하단 시트 펼치기 또는 숨기기">
+          <span class="bottom-sheet-grabber" aria-hidden="true"></span>
+          <span class="bottom-sheet-hidden-arrow" aria-hidden="true">⌃</span>
+        </button>
+        <div id="bottomSheetScroll" class="bottom-sheet-scroll">
+          <section class="result">
+            <div class="status" id="status" aria-live="polite"></div>
+            <div class="metric-grid">
+              <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
+              <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
+            </div>
+            <div class="result-actions">
+              <div class="history-nav" aria-label="저장된 코스 탐색">
+                <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
+                <span id="routePosition" class="route-position" aria-live="polite">0 / 0</span>
+                <button id="nextRoute" class="secondary" type="button" aria-label="다음 코스" title="다음 코스" disabled>›</button>
+              </div>
+              <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
+              <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
+            </div>
+          </section>
         </div>
-        <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
       </section>
     </aside>
 
     <main class="map-area">
       <div id="map"></div>
-      <button id="currentLocationBtn" class="current-location-button" type="button" aria-label="현재 위치 표시">◎ 현재 위치</button>
       <button id="mapFullscreenBtn" class="map-fullscreen-toggle" type="button" aria-label="지도 전체화면" title="지도 전체화면">⛶</button>
       <button id="mapFullscreenCloseBtn" class="map-fullscreen-close" type="button" aria-label="전체화면 닫기" title="전체화면 닫기" hidden>X</button>
       <div class="map-badge" id="mapBadge">파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.</div>
     </main>
+    <button id="currentLocationBtn" class="current-location-button" type="button" aria-label="현재 위치 표시">◎ 현재 위치</button>
   </div>
 
   <script>
@@ -1080,6 +2213,56 @@
     const isWindowsDesktop = /Windows NT/.test(navigator.userAgent);
     if (isMacDesktop) document.documentElement.classList.add("mac-desktop");
     if (isWindowsDesktop) document.documentElement.classList.add("windows-desktop");
+
+    const mobileSplash = document.querySelector("#mobileSplash");
+    const removeMobileSplash = () => {
+      if (mobileSplash?.isConnected) mobileSplash.remove();
+      document.documentElement.classList.remove(
+        "mobile-splash-pending",
+        "mobile-splash-ready",
+        "mobile-splash-flicker",
+        "mobile-splash-transition",
+        "mobile-splash-exit"
+      );
+    };
+
+    if (mobileSplash) {
+      mobileSplash.addEventListener("animationend", (event) => {
+        if (event.target === mobileSplash && event.animationName === "splashOverlayExit") {
+          removeMobileSplash();
+        }
+      });
+
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      Promise.resolve().then(() => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          document.documentElement.classList.add("mobile-splash-ready");
+          const initialHold = reducedMotion ? 250 : 1000;
+          const flickerDuration = reducedMotion ? 0 : 400;
+          const transitionDuration = reducedMotion ? 100 : 300;
+          const finalHold = reducedMotion ? 200 : 1200;
+          const exitDuration = reducedMotion ? 100 : 250;
+
+          window.setTimeout(() => {
+            document.documentElement.classList.add("mobile-splash-flicker");
+            window.setTimeout(() => {
+              document.documentElement.classList.remove("mobile-splash-flicker");
+              document.documentElement.classList.add("mobile-splash-transition");
+              window.setTimeout(() => {
+                window.setTimeout(() => {
+                  document.documentElement.classList.add("mobile-splash-exit");
+                  if (!initialLocationRequestStarted) {
+                    initialLocationRequestStarted = true;
+                    startCurrentLocationTracking({ endpoint: "start" });
+                  }
+                  window.setTimeout(removeMobileSplash, exitDuration);
+                }, finalHold);
+              }, transitionDuration);
+            }, flickerDuration);
+          }, initialHold);
+        }));
+      });
+    }
 
     const KAKAO_READY = typeof kakao !== "undefined" && kakao.maps;
     const KAKAO_WALK_API_URL = "/api/kakao-walk";
@@ -1118,14 +2301,154 @@
     const swapPlacesBtn = document.querySelector("#swapPlaces");
     const makeRouteBtn = document.querySelector("#makeRoute");
     const findNewBtn = document.querySelector("#findNew");
+    const routeForm = document.querySelector("#routeForm");
+    const routeButtonRow = document.querySelector(".button-row");
+    const resultPanel = document.querySelector(".result");
+    const resultActions = document.querySelector(".result-actions");
     const prevRouteBtn = document.querySelector("#prevRoute");
     const nextRouteBtn = document.querySelector("#nextRoute");
     const pickButtons = [...document.querySelectorAll("[data-pick-mode]")];
+    const sharedCurrentLocationBtn = document.querySelector("#setActiveCurrentLocation");
+    const sharedMapLocationBtn = document.querySelector("#setActiveMapLocation");
     const loopRouteInput = document.querySelector("#loopRoute");
     const sendWatchBtn = document.querySelector("#sendWatch");
+    const bottomSheet = document.querySelector("#bottomSheet");
+    const bottomSheetHandle = document.querySelector("#bottomSheetHandle");
+    const bottomSheetScroll = document.querySelector("#bottomSheetScroll");
+    const routePositionEl = document.querySelector("#routePosition");
     const recentSearchListEl = document.querySelector("#recentSearchList");
     const RECENT_SEARCH_STORAGE_KEY = "stopless.recent-route-search";
     let recentSearches = [];
+    let activeLocationTarget = "start";
+
+    function isMobileSheet() {
+      return true;
+    }
+
+    function syncBottomSheetLayout() {
+      if (!routeButtonRow || !routeForm || !resultPanel || !resultActions) return;
+      if (isMobileSheet()) {
+        if (routeButtonRow.parentElement !== resultPanel) resultPanel.insertBefore(routeButtonRow, resultActions);
+      } else if (routeButtonRow.parentElement !== routeForm) {
+        routeForm.appendChild(routeButtonRow);
+      }
+    }
+
+    function setBottomSheetState(state) {
+      if (!bottomSheet || !["initial", "route", "expanded", "hidden"].includes(state)) return;
+      const hasRoute = bottomSheet.classList.contains("has-route-sheet");
+      const resolvedState = !hasRoute && (state === "route" || state === "expanded") ? "initial" : state;
+      bottomSheet.dataset.sheetState = resolvedState;
+      bottomSheet.style.setProperty("--sheet-drag-y", "0px");
+      document.body.classList.remove("sheet-initial", "sheet-route", "sheet-expanded", "sheet-hidden");
+      document.body.classList.add(`sheet-${resolvedState}`);
+      if (resolvedState !== "expanded" && bottomSheetScroll) bottomSheetScroll.scrollTop = 0;
+      bottomSheetHandle?.setAttribute("aria-expanded", String(resolvedState === "expanded"));
+    }
+
+    function initializeBottomSheetDrag() {
+      if (!bottomSheet || !bottomSheetHandle) return;
+      syncBottomSheetLayout();
+      const metricDragSurface = bottomSheet.querySelector(".metric-grid");
+      let startY = 0;
+      let deltaY = 0;
+      let dragging = false;
+      let dragged = false;
+
+      const beginDrag = (clientY) => {
+        if (!isMobileSheet() || bottomSheet.dataset.sheetState === "initial") return false;
+        startY = clientY;
+        deltaY = 0;
+        dragging = true;
+        dragged = false;
+        bottomSheet.classList.add("is-dragging");
+        return true;
+      };
+
+      const moveDrag = (clientY) => {
+        if (!dragging) return;
+        deltaY = clientY - startY;
+        dragged = dragged || Math.abs(deltaY) > 5;
+        const limitedDelta = Math.max(-180, Math.min(220, deltaY));
+        bottomSheet.style.setProperty("--sheet-drag-y", `${limitedDelta}px`);
+      };
+
+      const snapAfterDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        bottomSheet.classList.remove("is-dragging");
+        const state = bottomSheet.dataset.sheetState;
+        if (!dragged) {
+          bottomSheet.style.setProperty("--sheet-drag-y", "0px");
+          return;
+        }
+        if (state === "hidden" && deltaY < -24) {
+          setBottomSheetState(bottomSheet.classList.contains("has-route-sheet") ? "route" : "initial");
+        } else if (state === "route" && deltaY < -24) {
+          setBottomSheetState("expanded");
+        } else if (state === "route" && deltaY > 36) {
+          setBottomSheetState("hidden");
+        } else if (state === "expanded" && deltaY > 110) {
+          setBottomSheetState("hidden");
+        } else if (state === "expanded" && deltaY > 30) {
+          setBottomSheetState("route");
+        } else {
+          setBottomSheetState(state);
+        }
+      };
+
+      bottomSheetHandle.addEventListener("pointerdown", (event) => {
+        if (!beginDrag(event.clientY)) return;
+        bottomSheetHandle.setPointerCapture?.(event.pointerId);
+      });
+
+      bottomSheetHandle.addEventListener("pointermove", (event) => {
+        moveDrag(event.clientY);
+      });
+
+      const finishDrag = (event) => {
+        if (!dragging) return;
+        bottomSheetHandle.releasePointerCapture?.(event.pointerId);
+        snapAfterDrag();
+      };
+
+      bottomSheetHandle.addEventListener("pointerup", finishDrag);
+      bottomSheetHandle.addEventListener("pointercancel", finishDrag);
+
+      [bottomSheetHandle, metricDragSurface].filter(Boolean).forEach((surface) => {
+        surface.addEventListener("touchstart", (event) => {
+          if (event.touches.length !== 1) return;
+          beginDrag(event.touches[0].clientY);
+        }, { passive: true });
+        surface.addEventListener("touchmove", (event) => {
+          if (!dragging || event.touches.length !== 1) return;
+          moveDrag(event.touches[0].clientY);
+          if (dragged) event.preventDefault();
+        }, { passive: false });
+        surface.addEventListener("touchend", snapAfterDrag, { passive: true });
+        surface.addEventListener("touchcancel", snapAfterDrag, { passive: true });
+      });
+
+      bottomSheetHandle.addEventListener("click", () => {
+        if (!isMobileSheet() || dragged) return;
+        const state = bottomSheet.dataset.sheetState;
+        if (state === "hidden") setBottomSheetState(bottomSheet.classList.contains("has-route-sheet") ? "route" : "initial");
+        else if (state === "route") setBottomSheetState("expanded");
+        else if (state === "expanded") setBottomSheetState("route");
+        else setBottomSheetState("hidden");
+      });
+
+      window.addEventListener("resize", syncBottomSheetLayout);
+    }
+
+    function setActiveLocationTarget(target) {
+      if (target !== "start" && target !== "end") return;
+      activeLocationTarget = target;
+      document.querySelectorAll(".place-field[data-endpoint]").forEach((field) => {
+        field.classList.toggle("active", field.dataset.endpoint === target);
+      });
+      if (pickMode && pickMode !== target) setPickMode(null);
+    }
 
     function restoreRecentSearch(entry) {
       startInput.value = entry.startLabel;
@@ -1142,6 +2465,7 @@
     }
 
     function renderRecentSearch() {
+      if (!recentSearchListEl) return;
       recentSearchListEl.replaceChildren();
       recentSearches.forEach((entry) => {
         const button = document.createElement("button");
@@ -1206,6 +2530,8 @@
     let currentLocationOverlay = null;
     let currentLocationWatchId = null;
     let currentLocationPoint = null;
+    let currentLocationInputTarget = null;
+    let initialLocationRequestStarted = false;
     const ROUTE_CANDIDATE_BATCH_ATTEMPTS = 3;
     const INITIAL_ROUTE_CANDIDATE_LOOKAHEAD = 6;
     const ROUTE_MODES = ["BROAD_FIRST", "SHORTEST", "ACCESSIBLE"];
@@ -1228,7 +2554,6 @@
       });
       geocoder = new kakao.maps.services.Geocoder();
       places = new kakao.maps.services.Places();
-      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
       kakao.maps.event.addListener(map, "click", handleMapClick);
     }
 
@@ -1255,6 +2580,42 @@
       currentLocationBtn.classList.add("active");
       currentLocationBtn.textContent = "◎ 현재 위치";
       if (firstLocation) map.panTo(mapPosition);
+
+      if (currentLocationInputTarget) {
+        const target = currentLocationInputTarget;
+        currentLocationInputTarget = null;
+        setEndpointFromCurrentLocation(target, lat, lng);
+      }
+    }
+
+    function setEndpointFromCurrentLocation(target, lat, lng) {
+      const isStart = target === "start";
+      const input = isStart ? startInput : endInput;
+      const selected = { lat, lng, ...latLngToTm(lat, lng), label: "현재 위치" };
+      input.value = selected.label;
+      input.placeholder = isStart ? "시작점을 입력해 주세요" : "어디까지 달릴까요?";
+      if (isStart) {
+        selectedStartPlace = selected;
+        syncLoopDestination();
+      } else {
+        selectedEndPlace = selected;
+      }
+      lastStart = null;
+      lastEnd = null;
+      setWatchButtonVisible(false);
+      resetRoutesHistory();
+
+      if (geocoder && typeof geocoder.coord2Address === "function") {
+        geocoder.coord2Address(lng, lat, (results, status) => {
+          if (status !== kakao.maps.services.Status.OK || !results?.[0]) return;
+          const address = results[0].road_address?.address_name || results[0].address?.address_name;
+          const selectionIsCurrent = isStart ? selectedStartPlace === selected : selectedEndPlace === selected;
+          if (!address || !selectionIsCurrent) return;
+          selected.label = address;
+          input.value = address;
+          if (isStart) syncLoopDestination();
+        });
+      }
     }
 
     function handleLocationError(error) {
@@ -1265,16 +2626,30 @@
         2: "현재 위치를 확인할 수 없습니다.",
         3: "현재 위치 확인 시간이 초과되었습니다."
       };
+      if (currentLocationInputTarget) {
+        const failedTarget = currentLocationInputTarget;
+        currentLocationInputTarget = null;
+        const input = failedTarget === "start" ? startInput : endInput;
+        input.value = "";
+        input.placeholder = failedTarget === "start" ? "시작점을 입력해 주세요" : "어디까지 달릴까요?";
+      }
       statusEl.textContent = messages[error.code] || "현재 위치를 확인하지 못했습니다.";
     }
 
-    function startCurrentLocationTracking() {
+    function startCurrentLocationTracking({ endpoint = null } = {}) {
       if (!navigator.geolocation) {
         statusEl.textContent = "이 브라우저에서는 현재 위치 기능을 지원하지 않습니다.";
+        startInput.placeholder = "시작점을 입력해 주세요";
         return;
       }
+      if (endpoint === "start" || endpoint === "end") currentLocationInputTarget = endpoint;
       if (currentLocationPoint) {
         map.panTo(new kakao.maps.LatLng(currentLocationPoint.lat, currentLocationPoint.lng));
+        if (currentLocationInputTarget) {
+          const target = currentLocationInputTarget;
+          currentLocationInputTarget = null;
+          setEndpointFromCurrentLocation(target, currentLocationPoint.lat, currentLocationPoint.lng);
+        }
       }
       if (currentLocationWatchId !== null) return;
       currentLocationBtn.disabled = true;
@@ -1334,6 +2709,7 @@
     function setPickMode(mode) {
       pickMode = pickMode === mode ? null : mode;
       pickButtons.forEach((button) => button.classList.toggle("active", pickMode === button.dataset.pickMode));
+      sharedMapLocationBtn?.classList.toggle("active", Boolean(pickMode));
       mapBadgeEl.textContent = pickMode
         ? `지도에서 ${pickMode === "start" ? "시작점" : "도착점"}을 클릭해 주세요.`
         : "파란 선은 추천 러닝 코스입니다. 왕복 구간도 하나의 선으로 표시합니다.";
@@ -1474,6 +2850,46 @@
       container.classList.add("active");
     }
 
+    function renderRecentPlaceSuggestions(input, container) {
+      const isStart = input === startInput;
+      const labels = [...new Set(recentSearches.map((entry) => (
+        isStart ? entry.startLabel : entry.endLabel
+      )).filter(Boolean))];
+      container.innerHTML = "";
+      if (!labels.length) {
+        hideSuggestions(container);
+        return;
+      }
+
+      const heading = document.createElement("div");
+      heading.className = "suggestion-heading";
+      heading.textContent = "최근 검색";
+      container.appendChild(heading);
+
+      labels.forEach((label) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "place-suggestion";
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          input.value = label;
+          if (isStart) {
+            selectedStartPlace = null;
+            syncLoopDestination();
+          } else {
+            selectedEndPlace = null;
+          }
+          hideSuggestions(container);
+          setWatchButtonVisible(false);
+          lastStart = null;
+          lastEnd = null;
+          resetRoutesHistory();
+        });
+        container.appendChild(button);
+      });
+      container.classList.add("active");
+    }
+
     function attachPlaceAutocomplete(input, container, timerName) {
       input.addEventListener("input", () => {
         if (timerName === "start") {
@@ -1483,6 +2899,10 @@
           selectedEndPlace = null;
         }
         clearTimeout(timerName === "start" ? startSuggestTimer : endSuggestTimer);
+        if (!input.value.trim()) {
+          renderRecentPlaceSuggestions(input, container);
+          return;
+        }
         const run = async () => {
           const query = input.value.trim();
           const rows = await searchKakaoPlaces(query);
@@ -1495,6 +2915,10 @@
         } else {
           endSuggestTimer = setTimeout(run, 60);
         }
+      });
+
+      input.addEventListener("focus", () => {
+        if (!input.value.trim()) renderRecentPlaceSuggestions(input, container);
       });
 
       input.addEventListener("blur", () => {
@@ -1946,7 +3370,11 @@
       });
     }
 
-    function drawRoute(start, end, route, targetRange) {
+    function drawRoute(start, end, route, targetRange, { preserveSheet = false } = {}) {
+      document.querySelector(".result")?.classList.add("has-route");
+      document.body.classList.add("route-ready");
+      bottomSheet?.classList.add("has-route-sheet");
+      if (isMobileSheet() && !preserveSheet) setBottomSheetState("route");
       clearMap();
       clearDraftPins();
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
@@ -1982,9 +3410,18 @@
     function updateRouteNavButtons() {
       prevRouteBtn.disabled = currentRouteIndex <= 0;
       nextRouteBtn.disabled = currentRouteIndex < 0 || currentRouteIndex >= routesHistory.length - 1;
+      if (routePositionEl) {
+        routePositionEl.textContent = currentRouteIndex >= 0
+          ? `${currentRouteIndex + 1} / ${routesHistory.length}`
+          : "0 / 0";
+      }
     }
 
     function resetRoutesHistory() {
+      document.querySelector(".result")?.classList.remove("has-route");
+      document.body.classList.remove("route-ready");
+      bottomSheet?.classList.remove("has-route-sheet");
+      if (isMobileSheet()) setBottomSheetState("initial");
       routesHistory = [];
       currentRouteIndex = -1;
       routeCandidateState = null;
@@ -2004,7 +3441,7 @@
       if (index < 0 || index >= routesHistory.length) return;
       currentRouteIndex = index;
       const entry = routesHistory[currentRouteIndex];
-      drawRoute(entry.start, entry.end, entry.route, entry.targetRange);
+      drawRoute(entry.start, entry.end, entry.route, entry.targetRange, { preserveSheet: true });
       updateRouteNavButtons();
     }
 
@@ -2130,6 +3567,18 @@
       button.addEventListener("click", () => setPickMode(button.dataset.pickMode));
     });
 
+    startInput.addEventListener("focus", () => setActiveLocationTarget("start"));
+    startInput.addEventListener("click", () => setActiveLocationTarget("start"));
+    endInput.addEventListener("focus", () => setActiveLocationTarget("end"));
+    endInput.addEventListener("click", () => setActiveLocationTarget("end"));
+
+    sharedCurrentLocationBtn.addEventListener("click", () => {
+      startCurrentLocationTracking({ endpoint: activeLocationTarget });
+    });
+    sharedMapLocationBtn.addEventListener("click", () => {
+      setPickMode(activeLocationTarget);
+    });
+
     document.querySelectorAll("input[name='targetRange']").forEach((input) => {
       input.addEventListener("change", () => {
         setWatchButtonVisible(false);
@@ -2188,8 +3637,10 @@
 
     loadRecentSearch();
     initMap();
-    startInput.value = "교대역";
-    endInput.value = "예술의전당";
+    initializeBottomSheetDrag();
+    setBottomSheetState("initial");
+    startInput.value = "";
+    endInput.value = "";
   </script>
 </body>
 </html>
