@@ -1785,7 +1785,7 @@
         bottom: 0;
         left: 0;
         display: block;
-        height: calc(88px + env(safe-area-inset-bottom));
+        height: calc(112px + env(safe-area-inset-bottom));
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, .14);
         border-bottom: 0;
@@ -1808,7 +1808,7 @@
       }
 
       .bottom-sheet[data-sheet-state="initial"] {
-        height: calc(88px + env(safe-area-inset-bottom));
+        height: calc(112px + env(safe-area-inset-bottom));
       }
 
       .bottom-sheet[data-sheet-state="expanded"] {
@@ -2001,7 +2001,7 @@
       }
 
       body.sheet-initial .app > .current-location-button {
-        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 94px);
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 118px);
       }
 
       body.sheet-collapsed .app > .current-location-button {
@@ -2070,7 +2070,7 @@
         </g>
         <g font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="-2">
           <text class="splash-stop" x="52" y="390" fill="#ff3042">STOP</text>
-          <text class="splash-less" x="204" y="390" fill="#39ff14">LESS</text>
+          <text class="splash-less" x="209" y="390" fill="#39ff14">LESS</text>
         </g>
       </svg>
     </div>
@@ -2184,7 +2184,7 @@
       Promise.resolve().then(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
           document.documentElement.classList.add("mobile-splash-ready");
-          const initialHold = reducedMotion ? 250 : 1000;
+          const initialHold = reducedMotion ? 250 : 700;
           const flickerDuration = reducedMotion ? 0 : 400;
           const transitionDuration = reducedMotion ? 100 : 300;
           const finalHold = reducedMotion ? 200 : 1200;
