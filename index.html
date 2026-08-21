@@ -1812,7 +1812,7 @@
       }
 
       .bottom-sheet[data-sheet-state="expanded"] {
-        height: var(--sheet-live-height, min(60dvh, 500px));
+        height: var(--sheet-live-height, min(50dvh, 400px));
       }
 
       .bottom-sheet-handle {
@@ -1996,7 +1996,7 @@
       }
 
       body.sheet-expanded .app > .current-location-button {
-        bottom: calc(min(60dvh, 500px) + 8px);
+        bottom: calc(min(50dvh, 400px) + 8px);
       }
     }
 
@@ -2307,7 +2307,7 @@
         startHeight = bottomSheet.getBoundingClientRect().height;
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
         collapsedHeight = Math.min(285, Math.max(230, viewportHeight * .30));
-        expandedHeight = Math.min(viewportHeight * .60, 500);
+        expandedHeight = Math.min(viewportHeight * .50, 400);
         dragging = true;
         dragged = false;
         bottomSheet.classList.add("is-dragging");
