@@ -1804,7 +1804,7 @@
       }
 
       .bottom-sheet[data-sheet-state="collapsed"] {
-        height: var(--sheet-live-height, max(230px, calc(34dvh + env(safe-area-inset-bottom))));
+        height: var(--sheet-live-height, calc(clamp(230px, 30dvh, 285px) + env(safe-area-inset-bottom)));
       }
 
       .bottom-sheet[data-sheet-state="initial"] {
@@ -1992,7 +1992,7 @@
       }
 
       body.sheet-collapsed .app > .current-location-button {
-        bottom: calc(max(230px, calc(34dvh + env(safe-area-inset-bottom))) + 8px);
+        bottom: calc(clamp(230px, 30dvh, 285px) + env(safe-area-inset-bottom) + 8px);
       }
 
       body.sheet-expanded .app > .current-location-button {
@@ -2306,7 +2306,7 @@
         deltaY = 0;
         startHeight = bottomSheet.getBoundingClientRect().height;
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
-        collapsedHeight = Math.max(230, viewportHeight * .34);
+        collapsedHeight = Math.min(285, Math.max(230, viewportHeight * .30));
         expandedHeight = Math.min(viewportHeight * .68, 560);
         dragging = true;
         dragged = false;
