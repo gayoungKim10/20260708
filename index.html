@@ -1877,6 +1877,12 @@
         height: 100%;
       }
 
+      .bottom-sheet[data-sheet-state="initial"] .result {
+        height: 100%;
+        align-content: center;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
       .bottom-sheet[data-sheet-state="expanded"] .bottom-sheet-scroll {
         overflow-y: hidden;
       }
