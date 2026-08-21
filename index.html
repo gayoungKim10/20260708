@@ -2246,7 +2246,7 @@
       Promise.resolve().then(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
           document.documentElement.classList.add("mobile-splash-ready");
-          const initialHold = reducedMotion ? 250 : 700;
+          const initialHold = reducedMotion ? 250 : 500;
           const flickerDuration = reducedMotion ? 0 : 400;
           const transitionDuration = reducedMotion ? 100 : 300;
           const finalHold = reducedMotion ? 200 : 900;
