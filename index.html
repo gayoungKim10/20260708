@@ -1779,7 +1779,6 @@
       }
 
       .bottom-sheet {
-        --sheet-drag-y: 0px;
         position: fixed;
         z-index: 26;
         right: 0;
@@ -1796,8 +1795,7 @@
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
         pointer-events: auto;
-        transform: translateY(var(--sheet-drag-y));
-        transition: height 320ms cubic-bezier(.2, .8, .2, 1), transform 320ms cubic-bezier(.2, .8, .2, 1);
+        transition: height 300ms cubic-bezier(.2, .8, .2, 1);
         touch-action: pan-y;
       }
 
@@ -1805,8 +1803,8 @@
         transition: none;
       }
 
-      .bottom-sheet[data-sheet-state="route"] {
-        height: calc(143px + env(safe-area-inset-bottom));
+      .bottom-sheet[data-sheet-state="collapsed"] {
+        height: var(--sheet-live-height, max(230px, calc(34dvh + env(safe-area-inset-bottom))));
       }
 
       .bottom-sheet[data-sheet-state="initial"] {
@@ -1814,16 +1812,7 @@
       }
 
       .bottom-sheet[data-sheet-state="expanded"] {
-        height: min(38dvh, 360px);
-      }
-
-      .bottom-sheet[data-sheet-state="hidden"] {
-        height: calc(143px + env(safe-area-inset-bottom));
-        transform: translateY(calc(100% - 34px + var(--sheet-drag-y)));
-      }
-
-      .bottom-sheet[data-sheet-state="hidden"]:not(.has-route-sheet) {
-        height: calc(88px + env(safe-area-inset-bottom));
+        height: var(--sheet-live-height, min(68dvh, 560px));
       }
 
       .bottom-sheet-handle {
@@ -1849,18 +1838,6 @@
         border-radius: 999px;
         background: rgba(255, 255, 255, .42);
       }
-
-      .bottom-sheet-hidden-arrow {
-        display: none;
-        color: #fff;
-        font-size: 22px;
-        font-weight: 900;
-        line-height: 1;
-        transform: translateY(2px);
-      }
-
-      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-grabber { display: none; }
-      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-hidden-arrow { display: block; }
 
       .bottom-sheet[data-sheet-state="initial"] .bottom-sheet-handle {
         display: none;
@@ -1901,8 +1878,19 @@
 
       .bottom-sheet .status { display: none; }
 
+      .bottom-sheet .sheet-summary {
+        display: grid;
+        order: -2;
+        gap: 10px;
+      }
+
+      .bottom-sheet .metric-grid {
+        order: initial !important;
+      }
+
       .bottom-sheet .button-row {
         position: static;
+        order: initial !important;
         display: grid;
         width: 100%;
         max-width: none;
@@ -1918,25 +1906,41 @@
         -webkit-backdrop-filter: none;
       }
 
+      .bottom-sheet[data-sheet-state="initial"] .button-row {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+      }
+
       .bottom-sheet[data-sheet-state="initial"] .metric-grid,
       .bottom-sheet[data-sheet-state="initial"] .result-actions,
-      .bottom-sheet[data-sheet-state="route"] .result-actions,
-      .bottom-sheet[data-sheet-state="hidden"] .bottom-sheet-scroll {
+      .bottom-sheet[data-sheet-state="collapsed"] .result-actions {
         display: none;
       }
 
-      .bottom-sheet[data-sheet-state="route"] .metric-grid,
+      .bottom-sheet[data-sheet-state="collapsed"] .metric-grid,
       .bottom-sheet[data-sheet-state="expanded"] .metric-grid {
         display: grid;
         touch-action: none;
       }
 
-      .bottom-sheet[data-sheet-state="route"] .button-row {
+      .bottom-sheet[data-sheet-state="collapsed"] .button-row,
+      .bottom-sheet[data-sheet-state="expanded"] .button-row {
+        grid-template-columns: minmax(0, 35fr) minmax(0, 60fr);
         margin-top: 0;
+      }
+
+      .bottom-sheet .button-row #makeRoute:disabled {
+        color: #777;
+        background: #202020;
+        border-color: #303030;
+        box-shadow: none;
+        cursor: default;
+        pointer-events: none;
+        transform: none;
       }
 
       .bottom-sheet[data-sheet-state="expanded"] .result-actions {
         display: grid;
+        order: 0 !important;
         grid-template-columns: 1fr;
         gap: 16px;
       }
@@ -1987,16 +1991,12 @@
         bottom: calc(max(10px, env(safe-area-inset-bottom)) + 94px);
       }
 
-      body.sheet-route .app > .current-location-button {
-        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 149px);
+      body.sheet-collapsed .app > .current-location-button {
+        bottom: calc(max(230px, calc(34dvh + env(safe-area-inset-bottom))) + 8px);
       }
 
       body.sheet-expanded .app > .current-location-button {
-        bottom: calc(min(38dvh, 360px) + 8px);
-      }
-
-      body.sheet-hidden .app > .current-location-button {
-        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 34px);
+        bottom: calc(min(68dvh, 560px) + 8px);
       }
     }
 
@@ -2112,16 +2112,17 @@
       </form>
 
       <section id="bottomSheet" class="bottom-sheet" data-sheet-state="initial" aria-label="경로 컨트롤">
-        <button id="bottomSheetHandle" class="bottom-sheet-handle" type="button" aria-label="하단 시트 펼치기 또는 숨기기">
+        <button id="bottomSheetHandle" class="bottom-sheet-handle" type="button" aria-label="결과 바텀시트 펼치기 또는 접기">
           <span class="bottom-sheet-grabber" aria-hidden="true"></span>
-          <span class="bottom-sheet-hidden-arrow" aria-hidden="true">⌃</span>
         </button>
         <div id="bottomSheetScroll" class="bottom-sheet-scroll">
           <section class="result">
             <div class="status" id="status" aria-live="polite"></div>
-            <div class="metric-grid">
-              <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
-              <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
+            <div class="sheet-summary">
+              <div class="metric-grid">
+                <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
+                <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
+              </div>
             </div>
             <div class="result-actions">
               <div class="history-nav" aria-label="저장된 코스 탐색">
@@ -2129,8 +2130,8 @@
                 <span id="routePosition" class="route-position" aria-live="polite">0 / 0</span>
                 <button id="nextRoute" class="secondary" type="button" aria-label="다음 코스" title="다음 코스" disabled>›</button>
               </div>
-              <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
               <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
+              <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
             </div>
           </section>
         </div>
@@ -2261,19 +2262,27 @@
     function syncBottomSheetLayout() {
       if (!routeButtonRow || !routeForm || !resultPanel || !resultActions) return;
       if (isMobileSheet()) {
-        if (routeButtonRow.parentElement !== resultPanel) resultPanel.insertBefore(routeButtonRow, resultActions);
+        const sheetSummary = resultPanel.querySelector(".sheet-summary");
+        const metricGrid = resultPanel.querySelector(".metric-grid");
+        if (sheetSummary && metricGrid?.parentElement !== sheetSummary) {
+          sheetSummary.prepend(metricGrid);
+        }
+        if (sheetSummary && routeButtonRow.parentElement !== sheetSummary) {
+          sheetSummary.appendChild(routeButtonRow);
+        }
       } else if (routeButtonRow.parentElement !== routeForm) {
         routeForm.appendChild(routeButtonRow);
       }
     }
 
     function setBottomSheetState(state) {
-      if (!bottomSheet || !["initial", "route", "expanded", "hidden"].includes(state)) return;
+      if (state === "route") state = "collapsed";
+      if (!bottomSheet || !["initial", "collapsed", "expanded"].includes(state)) return;
       const hasRoute = bottomSheet.classList.contains("has-route-sheet");
-      const resolvedState = !hasRoute && (state === "route" || state === "expanded") ? "initial" : state;
+      const resolvedState = !hasRoute && (state === "collapsed" || state === "expanded") ? "initial" : state;
       bottomSheet.dataset.sheetState = resolvedState;
-      bottomSheet.style.setProperty("--sheet-drag-y", "0px");
-      document.body.classList.remove("sheet-initial", "sheet-route", "sheet-expanded", "sheet-hidden");
+      bottomSheet.style.removeProperty("--sheet-live-height");
+      document.body.classList.remove("sheet-initial", "sheet-collapsed", "sheet-expanded");
       document.body.classList.add(`sheet-${resolvedState}`);
       if (resolvedState !== "expanded" && bottomSheetScroll) bottomSheetScroll.scrollTop = 0;
       bottomSheetHandle?.setAttribute("aria-expanded", String(resolvedState === "expanded"));
@@ -2287,11 +2296,18 @@
       let deltaY = 0;
       let dragging = false;
       let dragged = false;
+      let startHeight = 0;
+      let collapsedHeight = 0;
+      let expandedHeight = 0;
 
       const beginDrag = (clientY) => {
-        if (!isMobileSheet() || bottomSheet.dataset.sheetState === "initial") return false;
+        if (!isMobileSheet() || !["collapsed", "expanded"].includes(bottomSheet.dataset.sheetState)) return false;
         startY = clientY;
         deltaY = 0;
+        startHeight = bottomSheet.getBoundingClientRect().height;
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        collapsedHeight = Math.max(230, viewportHeight * .34);
+        expandedHeight = Math.min(viewportHeight * .68, 560);
         dragging = true;
         dragged = false;
         bottomSheet.classList.add("is-dragging");
@@ -2302,8 +2318,8 @@
         if (!dragging) return;
         deltaY = clientY - startY;
         dragged = dragged || Math.abs(deltaY) > 5;
-        const limitedDelta = Math.max(-180, Math.min(220, deltaY));
-        bottomSheet.style.setProperty("--sheet-drag-y", `${limitedDelta}px`);
+        const liveHeight = Math.max(collapsedHeight, Math.min(expandedHeight, startHeight - deltaY));
+        bottomSheet.style.setProperty("--sheet-live-height", `${liveHeight}px`);
       };
 
       const snapAfterDrag = () => {
@@ -2312,19 +2328,13 @@
         bottomSheet.classList.remove("is-dragging");
         const state = bottomSheet.dataset.sheetState;
         if (!dragged) {
-          bottomSheet.style.setProperty("--sheet-drag-y", "0px");
+          bottomSheet.style.removeProperty("--sheet-live-height");
           return;
         }
-        if (state === "hidden" && deltaY < -24) {
-          setBottomSheetState(bottomSheet.classList.contains("has-route-sheet") ? "route" : "initial");
-        } else if (state === "route" && deltaY < -24) {
+        if (state === "collapsed" && deltaY < -72) {
           setBottomSheetState("expanded");
-        } else if (state === "route" && deltaY > 36) {
-          setBottomSheetState("hidden");
-        } else if (state === "expanded" && deltaY > 110) {
-          setBottomSheetState("hidden");
-        } else if (state === "expanded" && deltaY > 30) {
-          setBottomSheetState("route");
+        } else if (state === "expanded" && deltaY > 72) {
+          setBottomSheetState("collapsed");
         } else {
           setBottomSheetState(state);
         }
@@ -2348,27 +2358,21 @@
       bottomSheetHandle.addEventListener("pointerup", finishDrag);
       bottomSheetHandle.addEventListener("pointercancel", finishDrag);
 
-      [bottomSheetHandle, metricDragSurface].filter(Boolean).forEach((surface) => {
-        surface.addEventListener("touchstart", (event) => {
-          if (event.touches.length !== 1) return;
-          beginDrag(event.touches[0].clientY);
-        }, { passive: true });
-        surface.addEventListener("touchmove", (event) => {
-          if (!dragging || event.touches.length !== 1) return;
-          moveDrag(event.touches[0].clientY);
-          if (dragged) event.preventDefault();
-        }, { passive: false });
-        surface.addEventListener("touchend", snapAfterDrag, { passive: true });
-        surface.addEventListener("touchcancel", snapAfterDrag, { passive: true });
-      });
+      if (metricDragSurface) {
+        metricDragSurface.addEventListener("pointerdown", (event) => {
+          if (!beginDrag(event.clientY)) return;
+          metricDragSurface.setPointerCapture?.(event.pointerId);
+        });
+        metricDragSurface.addEventListener("pointermove", (event) => moveDrag(event.clientY));
+        metricDragSurface.addEventListener("pointerup", snapAfterDrag);
+        metricDragSurface.addEventListener("pointercancel", snapAfterDrag);
+      }
 
       bottomSheetHandle.addEventListener("click", () => {
         if (!isMobileSheet() || dragged) return;
         const state = bottomSheet.dataset.sheetState;
-        if (state === "hidden") setBottomSheetState(bottomSheet.classList.contains("has-route-sheet") ? "route" : "initial");
-        else if (state === "route") setBottomSheetState("expanded");
-        else if (state === "expanded") setBottomSheetState("route");
-        else setBottomSheetState("hidden");
+        if (state === "collapsed") setBottomSheetState("expanded");
+        else if (state === "expanded") setBottomSheetState("collapsed");
       });
 
       window.addEventListener("resize", syncBottomSheetLayout);
@@ -3307,7 +3311,7 @@
       document.querySelector(".result")?.classList.add("has-route");
       document.body.classList.add("route-ready");
       bottomSheet?.classList.add("has-route-sheet");
-      if (isMobileSheet() && !preserveSheet) setBottomSheetState("route");
+      if (isMobileSheet() && !preserveSheet) setBottomSheetState("collapsed");
       clearMap();
       clearDraftPins();
       const path = route.latLngs.map(([lat, lng]) => new kakao.maps.LatLng(lat, lng));
@@ -3350,11 +3354,12 @@
       }
     }
 
-    function resetRoutesHistory() {
+    function resetRoutesHistory({ preserveRunDisabled = false } = {}) {
       document.querySelector(".result")?.classList.remove("has-route");
       document.body.classList.remove("route-ready");
       bottomSheet?.classList.remove("has-route-sheet");
       if (isMobileSheet()) setBottomSheetState("initial");
+      if (!preserveRunDisabled) makeRouteBtn.disabled = false;
       routesHistory = [];
       currentRouteIndex = -1;
       routeCandidateState = null;
@@ -3426,7 +3431,7 @@
 
       try {
         if (reset || !lastStart || !lastEnd) {
-          resetRoutesHistory();
+          resetRoutesHistory({ preserveRunDisabled: true });
           await ensureRouteEndpoints(targetRange, useLoop, startText, endText);
           if (reset) saveRecentSearch(lastStart, lastEnd, useLoop);
         }
@@ -3445,13 +3450,13 @@
         }
 
         appendRouteToHistory(lastStart, lastEnd, route, targetRange);
-        drawRoute(lastStart, lastEnd, route, targetRange);
+        drawRoute(lastStart, lastEnd, route, targetRange, { preserveSheet: !reset });
       } catch (error) {
         setWatchButtonVisible(false);
         statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
         if (error.showAlert) alert(error.message);
       } finally {
-        makeRouteBtn.disabled = false;
+        makeRouteBtn.disabled = bottomSheet?.classList.contains("has-route-sheet") || false;
         findNewBtn.disabled = false;
         updateRouteNavButtons();
       }
