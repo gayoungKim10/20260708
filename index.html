@@ -2085,6 +2085,34 @@
         bottom: calc(max(10px, env(safe-area-inset-bottom)) + 34px);
       }
     }
+
+    /* Desktop preview: render the app inside an iPhone 15-sized viewport. */
+    @media (min-width: 769px) {
+      body {
+        display: grid;
+        min-height: 100vh;
+        min-height: 100dvh;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      .app {
+        width: min(390px, calc(100vw - 40px), calc((100dvh - 40px) * .4620853));
+        height: auto;
+        aspect-ratio: 390 / 844;
+        border-radius: 28px;
+      }
+
+      .splash-overlay {
+        top: 50%;
+        width: min(390px, calc(100vw - 40px), calc((100dvh - 40px) * .4620853));
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 390 / 844;
+        border-radius: 28px;
+        transform: translate(-50%, -50%);
+      }
+    }
   </style>
 </head>
 <body>
