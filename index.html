@@ -1812,7 +1812,7 @@
       }
 
       .bottom-sheet[data-sheet-state="expanded"] {
-        height: var(--sheet-live-height, min(64dvh, 480px));
+        height: var(--sheet-live-height, min(62dvh, 455px));
       }
 
       .bottom-sheet-handle {
@@ -1837,6 +1837,7 @@
         width: 28px;
         height: 22px;
         color: rgba(255, 255, 255, .56);
+        transform: translateY(-4px);
       }
 
       .bottom-sheet-grabber svg {
@@ -1893,7 +1894,7 @@
 
       .bottom-sheet .metric b,
       .bottom-sheet .metric #distance {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 900;
         line-height: 1.08;
       }
@@ -2029,7 +2030,7 @@
       }
 
       body.sheet-expanded .app > .current-location-button {
-        bottom: calc(min(64dvh, 480px) + 8px);
+        bottom: calc(min(62dvh, 455px) + 8px);
       }
     }
 
@@ -2344,7 +2345,7 @@
         startHeight = bottomSheet.getBoundingClientRect().height;
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
         collapsedHeight = Math.min(285, Math.max(230, viewportHeight * .30));
-        expandedHeight = Math.min(viewportHeight * .64, 480);
+        expandedHeight = Math.min(viewportHeight * .62, 455);
         dragging = true;
         dragged = false;
         bottomSheet.classList.add("is-dragging");
