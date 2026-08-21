@@ -1812,7 +1812,7 @@
       }
 
       .bottom-sheet[data-sheet-state="expanded"] {
-        height: var(--sheet-live-height, min(50dvh, 400px));
+        height: var(--sheet-live-height, min(53dvh, 420px));
       }
 
       .bottom-sheet-handle {
@@ -1941,6 +1941,7 @@
       .bottom-sheet[data-sheet-state="expanded"] .result-actions {
         display: grid;
         order: 0 !important;
+        width: 100%;
         grid-template-columns: 1fr;
         gap: 16px;
       }
@@ -1982,8 +1983,13 @@
       }
 
       .bottom-sheet .result #sendWatch {
+        display: block;
+        width: 100%;
+        max-width: none;
         min-height: 50px;
         margin: 0 0 2px;
+        justify-self: stretch;
+        align-self: stretch;
         font-size: 12px;
       }
 
@@ -1996,7 +2002,7 @@
       }
 
       body.sheet-expanded .app > .current-location-button {
-        bottom: calc(min(50dvh, 400px) + 8px);
+        bottom: calc(min(53dvh, 420px) + 8px);
       }
     }
 
@@ -2307,7 +2313,7 @@
         startHeight = bottomSheet.getBoundingClientRect().height;
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
         collapsedHeight = Math.min(285, Math.max(230, viewportHeight * .30));
-        expandedHeight = Math.min(viewportHeight * .50, 400);
+        expandedHeight = Math.min(viewportHeight * .53, 420);
         dragging = true;
         dragged = false;
         bottomSheet.classList.add("is-dragging");
@@ -2487,7 +2493,7 @@
       }
       map = new kakao.maps.Map(document.querySelector("#map"), {
         center: new kakao.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lng),
-        level: 8
+        level: 5
       });
       geocoder = new kakao.maps.services.Geocoder();
       places = new kakao.maps.services.Places();
@@ -2516,7 +2522,10 @@
       currentLocationBtn.disabled = false;
       currentLocationBtn.classList.add("active");
       currentLocationBtn.textContent = "◎ 현재 위치";
-      if (firstLocation) map.panTo(mapPosition);
+      if (firstLocation) {
+        map.setLevel(3);
+        map.panTo(mapPosition);
+      }
 
       if (currentLocationInputTarget) {
         const target = currentLocationInputTarget;
@@ -2599,6 +2608,21 @@
         },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
       );
+    }
+
+    async function handleCurrentLocationButtonClick() {
+      if (navigator.permissions?.query) {
+        try {
+          const permission = await navigator.permissions.query({ name: "geolocation" });
+          if (permission.state === "denied") {
+            alert("위치 권한이 차단되어 있습니다. 브라우저 또는 기기 설정에서 이 사이트의 위치 권한을 허용해 주세요.");
+            return;
+          }
+        } catch (error) {
+          console.warn("위치 권한 상태를 확인하지 못했습니다.", error);
+        }
+      }
+      startCurrentLocationTracking();
     }
 
     function refreshMapLayout() {
@@ -3568,7 +3592,7 @@
       alert("서비스 준비 중입니다");
     });
 
-    currentLocationBtn.addEventListener("click", startCurrentLocationTracking);
+    currentLocationBtn.addEventListener("click", handleCurrentLocationButtonClick);
     window.addEventListener("beforeunload", () => {
       if (currentLocationWatchId !== null) navigator.geolocation.clearWatch(currentLocationWatchId);
     });
