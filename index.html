@@ -101,10 +101,10 @@
 
       .splash-runner {
         opacity: 0;
-        transform: scale(.72);
+        transform: translateY(6px) scale(.84);
         transform-origin: center;
         transform-box: fill-box;
-        transition: opacity 260ms ease-out, transform 300ms cubic-bezier(.2, .85, .3, 1.15);
+        transition: opacity 520ms ease-out, transform 600ms cubic-bezier(.2, .75, .25, 1);
       }
 
       .splash-stop {
@@ -114,8 +114,8 @@
 
       .splash-less {
         opacity: 0;
-        transform: translateX(-10px);
-        transition: opacity 280ms ease-out 60ms, transform 280ms ease-out 60ms;
+        transform: translate(-6px, 3px);
+        transition: opacity 520ms ease-out 100ms, transform 600ms cubic-bezier(.2, .75, .25, 1) 100ms;
       }
 
       html.mobile-splash-flicker .splash-red-light {
