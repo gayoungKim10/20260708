@@ -2295,6 +2295,12 @@
     <button id="coursePoolDialogConfirm" type="button">확인</button>
   </dialog>
 
+  <dialog id="apiLimitDialog" class="course-pool-dialog" aria-labelledby="apiLimitDialogTitle" aria-describedby="apiLimitDialogBody">
+    <h2 id="apiLimitDialogTitle">오늘의 경로 검색 한도에 도달했어요.</h2>
+    <p id="apiLimitDialogBody">내일 다시 이용해 주세요.</p>
+    <button id="apiLimitDialogConfirm" type="button">확인</button>
+  </dialog>
+
   <script>
     const mobileSplash = document.querySelector("#mobileSplash");
     const removeMobileSplash = () => {
@@ -2400,6 +2406,8 @@
     const routePositionEl = document.querySelector("#routePosition");
     const coursePoolDialog = document.querySelector("#coursePoolDialog");
     const coursePoolDialogConfirm = document.querySelector("#coursePoolDialogConfirm");
+    const apiLimitDialog = document.querySelector("#apiLimitDialog");
+    const apiLimitDialogConfirm = document.querySelector("#apiLimitDialogConfirm");
     const recentSearchListEl = document.querySelector("#recentSearchList");
     const RECENT_SEARCH_STORAGE_KEY = "stopless.recent-route-search";
     let recentSearches = [];
@@ -2415,6 +2423,17 @@
     }
 
     coursePoolDialogConfirm?.addEventListener("click", () => coursePoolDialog.close());
+
+    function showApiLimitDialog() {
+      if (!apiLimitDialog) return;
+      if (typeof apiLimitDialog.showModal === "function") {
+        if (!apiLimitDialog.open) apiLimitDialog.showModal();
+        return;
+      }
+      alert("오늘의 경로 검색 한도에 도달했어요.\n내일 다시 이용해 주세요.");
+    }
+
+    apiLimitDialogConfirm?.addEventListener("click", () => apiLimitDialog.close());
 
     function isMobileSheet() {
       return true;
@@ -3155,7 +3174,8 @@
         const errorBody = await response.json().catch(() => ({}));
         const error = new Error(errorBody.message || "카카오 도보 경로 API 응답이 없습니다.");
         error.code = errorBody.code;
-        error.showAlert = errorBody.code === -10 || /limit|한도/i.test(error.message);
+        error.isApiLimit = errorBody.code === -10 || /limit|한도/i.test(error.message);
+        error.showAlert = error.isApiLimit;
         throw error;
       }
       const data = await response.json();
@@ -3620,8 +3640,11 @@
         drawRoute(lastStart, lastEnd, route, targetRange, { preserveSheet: !reset });
       } catch (error) {
         setWatchButtonVisible(false);
-        statusEl.textContent = error.message || "코스를 계산하지 못했습니다.";
-        if (error.showAlert) alert(error.message);
+        statusEl.textContent = error.isApiLimit
+          ? "오늘의 경로 검색 한도에 도달했습니다."
+          : error.message || "코스를 계산하지 못했습니다.";
+        if (error.isApiLimit) showApiLimitDialog();
+        else if (error.showAlert) alert(error.message);
       } finally {
         makeRouteBtn.disabled = bottomSheet?.classList.contains("has-route-sheet") || false;
         findNewBtn.disabled = false;
