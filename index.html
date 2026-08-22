@@ -1085,6 +1085,13 @@
 
     #coursePoolDialog {
       width: min(calc(100% - 32px), 300px);
+      height: 300px;
+    }
+
+    #coursePoolDialog[open] {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     #coursePoolDialog h2 {
@@ -1096,8 +1103,9 @@
       display: block;
       width: 70%;
       margin: 0 auto;
-      font-size: 13.65px;
-      font-weight: 900;
+      font-size: 16px;
+      font-weight: 950;
+      -webkit-text-stroke: .2px currentColor;
     }
 
     @media (min-width: 0) {
