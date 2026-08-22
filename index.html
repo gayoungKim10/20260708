@@ -1961,6 +1961,10 @@
         grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
       }
 
+      .bottom-sheet[data-sheet-state="initial"] .history-nav {
+        display: none;
+      }
+
       .bottom-sheet[data-sheet-state="initial"] .metric-grid,
       .bottom-sheet[data-sheet-state="initial"] .result-actions,
       .bottom-sheet[data-sheet-state="collapsed"] .result-actions {
@@ -1973,10 +1977,34 @@
         touch-action: none;
       }
 
+      .bottom-sheet[data-sheet-state="collapsed"] .sheet-summary,
+      .bottom-sheet[data-sheet-state="expanded"] .sheet-summary {
+        grid-template-columns: minmax(0, 1.35fr) minmax(132px, 1fr);
+        gap: 10px 8px;
+      }
+
+      .bottom-sheet[data-sheet-state="collapsed"] .metric-grid,
+      .bottom-sheet[data-sheet-state="expanded"] .metric-grid {
+        grid-column: 1 / -1;
+      }
+
       .bottom-sheet[data-sheet-state="collapsed"] .button-row,
       .bottom-sheet[data-sheet-state="expanded"] .button-row {
-        grid-template-columns: minmax(0, 35fr) minmax(0, 60fr);
+        grid-column: 1;
+        grid-row: 2;
+        grid-template-columns: 1fr;
         margin-top: 0;
+      }
+
+      .bottom-sheet[data-sheet-state="collapsed"] .history-nav,
+      .bottom-sheet[data-sheet-state="expanded"] .history-nav {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .bottom-sheet[data-sheet-state="collapsed"] #makeRoute,
+      .bottom-sheet[data-sheet-state="expanded"] #makeRoute {
+        display: none;
       }
 
       .bottom-sheet .button-row #makeRoute:disabled {
@@ -1999,10 +2027,10 @@
 
       .bottom-sheet .history-nav {
         display: grid;
-        grid-template-columns: 46px 1fr 46px;
-        gap: 12px;
+        grid-template-columns: 38px minmax(38px, 1fr) 38px;
+        gap: 4px;
         align-items: center;
-        padding: 8px 2px 2px;
+        padding: 0;
       }
 
       .bottom-sheet .route-position {
@@ -2015,11 +2043,11 @@
 
       .bottom-sheet .result #prevRoute,
       .bottom-sheet .result #nextRoute {
-        width: 46px;
-        height: 46px;
-        min-height: 46px;
+        width: 38px;
+        height: 50px;
+        min-height: 50px;
         border-radius: 50%;
-        font-size: 28px;
+        font-size: 24px;
       }
 
       .bottom-sheet .result .note {
@@ -2199,13 +2227,13 @@
                 <div class="metric"><b id="distance">-</b><span>실제 경로 거리</span></div>
                 <div class="metric"><b id="crossings">-</b><span>횡단보도 수</span></div>
               </div>
-            </div>
-            <div class="result-actions">
               <div class="history-nav" aria-label="저장된 코스 탐색">
                 <button id="prevRoute" class="secondary" type="button" aria-label="이전 코스" title="이전 코스" disabled>‹</button>
                 <span id="routePosition" class="route-position" aria-live="polite">0 / 0</span>
                 <button id="nextRoute" class="secondary" type="button" aria-label="다음 코스" title="다음 코스" disabled>›</button>
               </div>
+            </div>
+            <div class="result-actions">
               <button id="sendWatch" class="watch-button" type="button" hidden>이 코스를 내 WATCH로 보내기</button>
               <p class="note">표시된 횡단 정보는 카카오 경로 안내 기준이며, 경로상의 모든 횡단보도와 신호를 포함하지 않을 수 있습니다.</p>
             </div>
@@ -2340,11 +2368,12 @@
       if (isMobileSheet()) {
         const sheetSummary = resultPanel.querySelector(".sheet-summary");
         const metricGrid = resultPanel.querySelector(".metric-grid");
+        const historyNav = resultPanel.querySelector(".history-nav");
         if (sheetSummary && metricGrid?.parentElement !== sheetSummary) {
           sheetSummary.prepend(metricGrid);
         }
-        if (sheetSummary && routeButtonRow.parentElement !== sheetSummary) {
-          sheetSummary.appendChild(routeButtonRow);
+        if (sheetSummary && (routeButtonRow.parentElement !== sheetSummary || routeButtonRow.nextElementSibling !== historyNav)) {
+          sheetSummary.insertBefore(routeButtonRow, historyNav || null);
         }
       } else if (routeButtonRow.parentElement !== routeForm) {
         routeForm.appendChild(routeButtonRow);
