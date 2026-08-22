@@ -1027,6 +1027,44 @@
       line-height: 1.3;
     }
 
+    .course-pool-dialog {
+      width: min(calc(100% - 32px), 380px);
+      margin: auto;
+      padding: 24px 20px 18px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 20px;
+      color: #fff;
+      background: #181818;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .58);
+      text-align: center;
+    }
+
+    .course-pool-dialog::backdrop {
+      background: rgba(0, 0, 0, .64);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+
+    .course-pool-dialog h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+
+    .course-pool-dialog p {
+      margin: 12px 0 20px;
+      color: #c9c9c9;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .course-pool-dialog button {
+      width: 100%;
+      min-height: 48px;
+      color: #080808;
+      background: var(--lime);
+    }
+
     @media (min-width: 0) {
       input,
       textarea,
@@ -2251,6 +2289,12 @@
     <button id="currentLocationBtn" class="current-location-button" type="button" aria-label="현재 위치 표시">◎ 현재 위치</button>
   </div>
 
+  <dialog id="coursePoolDialog" class="course-pool-dialog" aria-labelledby="coursePoolDialogTitle" aria-describedby="coursePoolDialogBody">
+    <h2 id="coursePoolDialogTitle">준비된 코스를 모두 둘러봤어요!</h2>
+    <p id="coursePoolDialogBody">새로운 경로를 원한다면 거리나 출발 조건을 변경해 주세요.</p>
+    <button id="coursePoolDialogConfirm" type="button">확인</button>
+  </dialog>
+
   <script>
     const mobileSplash = document.querySelector("#mobileSplash");
     const removeMobileSplash = () => {
@@ -2354,10 +2398,23 @@
     const bottomSheetHandle = document.querySelector("#bottomSheetHandle");
     const bottomSheetScroll = document.querySelector("#bottomSheetScroll");
     const routePositionEl = document.querySelector("#routePosition");
+    const coursePoolDialog = document.querySelector("#coursePoolDialog");
+    const coursePoolDialogConfirm = document.querySelector("#coursePoolDialogConfirm");
     const recentSearchListEl = document.querySelector("#recentSearchList");
     const RECENT_SEARCH_STORAGE_KEY = "stopless.recent-route-search";
     let recentSearches = [];
     let activeLocationTarget = "start";
+
+    function showCoursePoolDialog() {
+      if (!coursePoolDialog) return;
+      if (typeof coursePoolDialog.showModal === "function") {
+        if (!coursePoolDialog.open) coursePoolDialog.showModal();
+        return;
+      }
+      alert("준비된 코스를 모두 둘러봤어요!\n\n새로운 경로를 원한다면 거리나 출발 조건을 변경해 주세요.");
+    }
+
+    coursePoolDialogConfirm?.addEventListener("click", () => coursePoolDialog.close());
 
     function isMobileSheet() {
       return true;
@@ -3245,12 +3302,10 @@
       });
     }
     function nextRankedRouteCandidate(state) {
-      const requireExactRange = state.nextIndex < state.waypointSets.length;
       return state.rankedCandidates.find((candidate) => {
         const signature = routeSignature(candidate);
         return !state.shownRouteSignatures.has(signature)
-          && candidate.crossed >= lastShownCrossingCount
-          && (!requireExactRange || candidate.insideTargetRange);
+          && candidate.crossed >= lastShownCrossingCount;
       }) || null;
     }
 
@@ -3269,24 +3324,13 @@
         }
       }
 
-      while (state.nextIndex < state.waypointSets.length || nextRankedRouteCandidate(state)) {
-        let candidate = nextRankedRouteCandidate(state);
-        if (!candidate) {
-          await collectRouteCandidates(state, targetRange);
-          candidate = nextRankedRouteCandidate(state);
-        }
-        if (!candidate) {
-          if (state.nextIndex < state.waypointSets.length) continue;
-          break;
-        }
+      const candidate = nextRankedRouteCandidate(state);
+      if (!candidate) return null;
 
-        const signature = routeSignature(candidate);
-        state.shownRouteSignatures.add(signature);
-        lastShownCrossingCount = candidate.crossed;
-        return candidate;
-      }
-
-      return null;
+      const signature = routeSignature(candidate);
+      state.shownRouteSignatures.add(signature);
+      lastShownCrossingCount = candidate.crossed;
+      return candidate;
     }
     function isRouteInsideTargetRange(route, targetRange) {
       return route.meters >= targetRange.min && route.meters <= targetRange.max;
@@ -3559,16 +3603,16 @@
           if (reset) saveRecentSearch(lastStart, lastEnd, useLoop);
         }
 
-        let route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
+        const route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
         if (!route) {
-          routeCandidateState = null;
-          statusEl.textContent = "기존 후보를 모두 확인해 다른 방향의 카카오 보행 경로를 찾고 있습니다.";
-          route = await choosePedestrianRoute(lastStart, lastEnd, targetRange);
-        }
-        if (!route) {
-          routeCandidateState = null;
-          alert("현재 조건에서 새 추천 경로를 찾지 못했습니다. 다시 시도하면 다른 방향으로 계속 탐색합니다.");
-          statusEl.textContent = `${formatKmRange(targetRange)} 범위의 새 경로를 찾지 못했습니다. FIND NEW를 누르면 다른 방향 후보를 계속 탐색합니다.`;
+          if (reset) {
+            alert("현재 조건에서 추천 경로를 찾지 못했습니다. 거리나 출발 조건을 변경해 주세요.");
+            statusEl.textContent = `${formatKmRange(targetRange)} 범위의 추천 경로를 찾지 못했습니다.`;
+          } else {
+            setWatchButtonVisible(true);
+            statusEl.textContent = "준비된 코스를 모두 확인했습니다.";
+            showCoursePoolDialog();
+          }
           return;
         }
 
