@@ -1690,16 +1690,18 @@
         background: var(--green);
       }
 
-      .shared-place-actions #setActiveMapLocation:disabled,
-      .shared-place-actions #setActiveMapLocation:disabled:hover,
-      .shared-place-actions #setActiveMapLocation:disabled:active {
-        opacity: .62;
-        color: #aaa;
+      .shared-place-actions #setActiveMapLocation[data-target-ready="false"],
+      .shared-place-actions #setActiveMapLocation[data-target-ready="false"]:hover,
+      .shared-place-actions #setActiveMapLocation[data-target-ready="false"]:active,
+      .shared-place-actions #setActiveMapLocation[data-target-ready="false"]:focus,
+      .shared-place-actions #setActiveMapLocation[data-target-ready="false"]:focus-visible {
+        color: #ddd;
         background: rgba(31, 31, 31, .92);
+        outline: 0;
         box-shadow: none;
         cursor: default;
-        pointer-events: none;
         transform: none;
+        -webkit-tap-highlight-color: transparent;
       }
 
       .shared-place-actions .loop-toggle {
@@ -2296,7 +2298,7 @@
         </div>
         <div class="shared-place-actions" aria-label="선택한 위치 설정">
           <button id="setActiveCurrentLocation" class="secondary" type="button">◎ 현위치로 선택</button>
-          <button id="setActiveMapLocation" class="secondary" type="button" disabled>⌖ 지도에서 선택</button>
+          <button id="setActiveMapLocation" class="secondary" type="button" data-target-ready="false">⌖ 지도에서 선택</button>
           <label class="loop-toggle">
             <input id="loopRoute" type="checkbox">
             루프 코스
@@ -2488,6 +2490,7 @@
     const RECENT_SEARCH_STORAGE_KEY = "stopless.recent-route-search";
     let recentSearches = [];
     let activeLocationTarget = "start";
+    let hasExplicitLocationTarget = false;
 
     function showCoursePoolDialog() {
       if (!coursePoolDialog) return;
@@ -2638,7 +2641,8 @@
     function setActiveLocationTarget(target) {
       if (target !== "start" && target !== "end") return;
       activeLocationTarget = target;
-      sharedMapLocationBtn.disabled = false;
+      hasExplicitLocationTarget = true;
+      sharedMapLocationBtn.dataset.targetReady = "true";
       document.querySelectorAll(".place-field[data-endpoint]").forEach((field) => {
         field.classList.toggle("active", field.dataset.endpoint === target);
       });
@@ -3789,7 +3793,7 @@
       startCurrentLocationTracking({ endpoint: activeLocationTarget, userInitiated: true });
     });
     sharedMapLocationBtn.addEventListener("click", () => {
-      if (sharedMapLocationBtn.disabled) return;
+      if (!hasExplicitLocationTarget) return;
       setPickMode(activeLocationTarget);
     });
 
