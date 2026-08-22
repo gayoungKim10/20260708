@@ -2376,13 +2376,15 @@
       });
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const isMobileDevice = window.matchMedia("(pointer: coarse)").matches
+        || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
       Promise.resolve().then(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
           document.documentElement.classList.add("mobile-splash-ready");
           const initialHold = reducedMotion ? 250 : 500;
           const flickerDuration = reducedMotion ? 0 : 400;
           const transitionDuration = reducedMotion ? 100 : 300;
-          const finalHold = reducedMotion ? 200 : 900;
+          const finalHold = reducedMotion ? 200 : (isMobileDevice ? 2000 : 900);
           const exitDuration = reducedMotion ? 100 : 250;
 
           window.setTimeout(() => {
@@ -2703,6 +2705,7 @@
     let currentLocationWatchId = null;
     let currentLocationPoint = null;
     let currentLocationInputTarget = null;
+    let currentLocationRequestFromUser = false;
     let initialLocationRequestStarted = false;
     const ROUTE_CANDIDATE_BATCH_ATTEMPTS = 3;
     const INITIAL_ROUTE_CANDIDATE_LOOKAHEAD = 6;
@@ -2734,6 +2737,7 @@
       const lng = position.coords.longitude;
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || !map) return;
       const firstLocation = !currentLocationPoint;
+      currentLocationRequestFromUser = false;
       currentLocationPoint = { lat, lng };
       const mapPosition = new kakao.maps.LatLng(lat, lng);
       if (!currentLocationOverlay) {
@@ -2811,7 +2815,7 @@
       statusEl.textContent = messages[error.code] || "현재 위치를 확인하지 못했습니다.";
     }
 
-    function startCurrentLocationTracking({ endpoint = null } = {}) {
+    function startCurrentLocationTracking({ endpoint = null, userInitiated = false } = {}) {
       if (!navigator.geolocation) {
         statusEl.textContent = "이 브라우저에서는 현재 위치 기능을 지원하지 않습니다.";
         startInput.placeholder = "시작점을 입력해 주세요";
@@ -2827,13 +2831,19 @@
         }
       }
       if (currentLocationWatchId !== null) return;
+      currentLocationRequestFromUser = userInitiated;
       currentLocationBtn.disabled = true;
       currentLocationBtn.textContent = "위치 확인 중…";
       currentLocationWatchId = navigator.geolocation.watchPosition(
         showCurrentLocation,
         (error) => {
+          const wasUserInitiated = currentLocationRequestFromUser;
+          currentLocationRequestFromUser = false;
           currentLocationWatchId = null;
           handleLocationError(error);
+          if (wasUserInitiated && error.code === 1) {
+            alert("위치 권한이 차단되어 있습니다. 브라우저 또는 기기 설정에서 이 사이트의 위치 권한을 허용해 주세요.");
+          }
         },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
       );
@@ -3755,7 +3765,7 @@
     endInput.addEventListener("click", () => setActiveLocationTarget("end"));
 
     sharedCurrentLocationBtn.addEventListener("click", () => {
-      startCurrentLocationTracking({ endpoint: activeLocationTarget });
+      startCurrentLocationTracking({ endpoint: activeLocationTarget, userInitiated: true });
     });
     sharedMapLocationBtn.addEventListener("click", () => {
       setPickMode(activeLocationTarget);
