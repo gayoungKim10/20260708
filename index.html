@@ -1083,6 +1083,23 @@
       font-weight: 900;
     }
 
+    #coursePoolDialog {
+      width: min(calc(100% - 32px), 360px);
+    }
+
+    #coursePoolDialog h2 {
+      font-size: 16.8px;
+      white-space: nowrap;
+    }
+
+    #coursePoolDialog button {
+      display: block;
+      width: 80%;
+      margin: 0 auto;
+      font-size: 13.65px;
+      font-weight: 900;
+    }
+
     @media (min-width: 0) {
       input,
       textarea,
@@ -2314,7 +2331,7 @@
       </svg>
     </span>
     <h2 id="coursePoolDialogTitle">준비된 코스를 모두 둘러봤어요!</h2>
-    <p id="coursePoolDialogBody">새로운 경로를 원한다면 거리나 출발 조건을 변경해 주세요.</p>
+    <p id="coursePoolDialogBody">새로운 경로를 원한다면<br>목표 거리나 경로 조건을 변경해주세요.</p>
     <button id="coursePoolDialogConfirm" type="button">확인</button>
   </dialog>
 
